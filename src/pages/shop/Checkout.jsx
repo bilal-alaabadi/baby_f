@@ -15,12 +15,14 @@ const Checkout = () => {
   const { products, totalPrice, country } = useSelector((state) => state.cart);
   const { user } = useSelector(state => state.auth);
 
-  // أسعار الشحن والعملات
-  const baseShippingFee = country === 'الإمارات' ? 4 : 2;
+  // سعر الشحن الأساسي بالريال العماني
+  const baseShippingFee = country === 'الإمارات'? 0.1 : 0.1;
+
+  // العملة وسعر الصرف حسب البلد
   const currency = country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = country === 'الإمارات' ? 9.5 : 1;
-  const shippingFee = country === 'الإمارات' ? 4 * exchangeRate : 2;
-  const totalShippingFee = country === 'الإمارات' ? 4 : 2;
+
+  const shippingFee = baseShippingFee * exchangeRate;
 
   useEffect(() => {
     if (!user) {

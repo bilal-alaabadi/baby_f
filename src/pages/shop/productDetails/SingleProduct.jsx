@@ -60,7 +60,8 @@ const SingleProduct = () => {
     // Calculate prices
     const price = (singleProduct.regularPrice || singleProduct.price || 0) * exchangeRate;
     const oldPrice = singleProduct.oldPrice ? singleProduct.oldPrice * exchangeRate : null;
-    const discountPercentage = oldPrice ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
+    const showDiscount = oldPrice && oldPrice !== price;
+    const discountPercentage = showDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
 
     return (
         <>
@@ -79,8 +80,8 @@ const SingleProduct = () => {
                 <div className='flex flex-col items-center md:flex-row gap-8'>
                     {/* Product Image */}
                     <div className='md:w-1/2 w-full relative'>
-                        {singleProduct.oldPrice && (
-                            <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                        {showDiscount && (
+                            <div className="absolute top-3 left-3 bg-[#3D4B2E] text-white text-xs font-bold px-2 py-1 rounded-full z-10">
                                 خصم {discountPercentage}%
                             </div>
                         )}
@@ -127,7 +128,7 @@ const SingleProduct = () => {
                         {/* Price */}
                         <div className='text-xl text-[#3D4B2E] mb-4 space-x-1'>
                             {price.toFixed(2)} {currency}
-                            {oldPrice && (
+                            {showDiscount && (
                                 <s className="text-gray-500 text-sm ml-2">{oldPrice.toFixed(2)} {currency}</s>
                             )}
                         </div>
@@ -149,7 +150,7 @@ const SingleProduct = () => {
                                 e.stopPropagation();
                                 handleAddToCart(singleProduct);
                             }}
-                            className={`mt-6 px-6 py-3 bg-[#3D4B2E] text-white rounded-md hover:bg-[#4E5A3F] transition-all duration-200 relative overflow-hidden ${
+                            className={`mt-6 px-6 py-3 bg-[#3D4B2E] text-white rounded-md hover:bg-[#c19e22] transition-all duration-200 relative overflow-hidden ${
                                 isAddingToCart ? 'bg-green-600' : ''
                             }`}
                         >

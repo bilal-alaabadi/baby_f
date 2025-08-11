@@ -8,13 +8,10 @@ import { useNavigate } from 'react-router-dom';
 
 const categories = [
     { label: 'أختر منتج', value: '' },
-    { label: 'حناء بودر', value: 'حناء بودر' },
-    { label: 'سدر بودر', value: 'سدر بودر' },
-    { label: 'أعشاب تكثيف وتطويل الشعر', value: 'أعشاب تكثيف وتطويل الشعر' },
-    { label: 'مشاط', value: 'مشاط' },
-    { label: 'خزامى', value: 'خزامى' },
-    { label: 'كركديه', value: 'كركديه' },
-    { label: 'إكليل الجبل', value: 'إكليل الجبل' }
+    { label: 'عطور', value: 'عطور' },
+    { label: 'معطرات الجسم', value: 'معطرات الجسم' },
+    { label: 'معطر الجو', value: 'معطر الجو' },
+    { label: 'عصي العتم', value: 'عصي العتم' }
 ];
 
 const sizes = [

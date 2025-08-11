@@ -1,73 +1,78 @@
 import React from 'react';
-import { FaInstagram, FaWhatsapp, FaSnapchatGhost, FaTiktok } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
 
 const Footer = () => {
   return (
-    <footer className="bg-[#698a52] py-8">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* قسم ABOUT */}
-          <div className='text-white text-center md:text-right'>
-            <h4 className="text-lg font-bold mb-4">عن المتجر</h4>
-            <ul className="space-y-2">
+    <footer className="bg-[#e2e5e5] py-5">
+      <div className="mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center md:text-right">
+          
+          {/* قسم قصتنا */}
+          <div className='text-[#4E5A3F]'>
+            <h4 className="text-lg font-bold mb-4 text-[#4E5A3F]">قصتنا</h4>
+            <ul className="space-y-2 text-[#4E5A3F]">
               <li>
-                <Link to="/shop" className="text-white hover:text-[#9B2D1F] transition-colors">
-                  المنتجات
-                </Link>
+                <a href="/about" className="transition-colors duration-300 hover:text-[#d3ae27] text-[#4E5A3F]">
+                  تعرف على متجر الأنثور 
+                </a>
               </li>
             </ul>
           </div>
           
-          {/* قسم OUR STORY */}
-          <div className='text-white text-center md:text-right'>
-            <h4 className="text-lg font-bold mb-4">قصتنا</h4>
-            <ul className="space-y-2">
+          {/* قسم المنتجات */}
+          <div className='text-[#4E5A3F]'>
+            <h4 className="text-lg font-bold mb-4 text-[#4E5A3F]">عن المتجر</h4>
+            <ul className="space-y-2 text-[#4E5A3F]">
               <li>
-                <Link to="/about" className="text-white hover:text-[#9B2D1F] transition-colors">
-                  قصة حناء برغند
-                </Link>
+                <a href="/shop" className="transition-colors duration-300 hover:text-[#d3ae27] text-[#4E5A3F]">المنتجات</a>
               </li>
             </ul>
           </div>
           
-          {/* قسم LEGAL */}
-          <div className='text-white text-center md:text-right'>
-            <h4 className="text-lg font-bold mb-4">الشروط والأحكام</h4>
-            <ul className="space-y-2">
+          {/* قسم الشروط */}
+          <div className='text-[#4E5A3F]'>
+            <h4 className="text-lg font-bold mb-4 text-[#4E5A3F]">الشروط والأحكام</h4>
+            <ul className="space-y-2 text-[#4E5A3F]">
               <li>
-                <Link to="/return-policy" className="text-white hover:text-[#9B2D1F] transition-colors">
-                  سياسة الاسترجاع
-                </Link>
+                <a href="/return-policy" className="transition-colors hover:text-[#d3ae27] duration-300 text-[#4E5A3F]">سياسة الاسترجاع</a>
               </li>
-            </ul> 
+            </ul>
           </div>
           
-          {/* قسم SOCIAL */}
-          <div className='text-white text-center md:text-right'>
-            <h4 className="text-lg font-bold mb-4">وسائل التواصل</h4>
-            <div className="flex justify-center md:justify-end gap-4">
-              <a href="https://www.instagram.com/henna.burgund/reels/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#9B2D1F] transition">
+          {/* قسم التواصل */}
+          <div className='text-[#4E5A3F]'>
+            <h4 className="text-lg font-bold mb-4 text-[#4E5A3F]">وسائل التواصل</h4>
+            <div className="flex justify-center md:justify-end gap-4 text-[#4E5A3F]">
+              <a
+                href="https://www.instagram.com/al__anthur/reels/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#d3ae27] transition"
+              >
                 <FaInstagram className="text-xl" />
               </a>
-              <a href="https://api.whatsapp.com/send/?phone=96876704406&text&type=phone_number&app_absent=0" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#9B2D1F] transition">
+              <a
+                href="https://api.whatsapp.com/send/?phone=96895441416&text&type=phone_number&app_absent=0"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#d3ae27] transition"
+              >
                 <FaWhatsapp className="text-xl" />
-              </a>
-              <a href="https://www.snapchat.com/add/henna.burgund" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#9B2D1F] transition">
-                <FaSnapchatGhost className="text-xl" />
-              </a>
-              <a href="https://www.tiktok.com/@henna.burgund" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#9B2D1F] transition">
-                <FaTiktok className="text-xl" />
               </a>
             </div>
           </div>
         </div>
 
         {/* حقوق النشر */}
-        <div className="border-t border-white/20 mt-10 pt-6 text-center">
-          <p className="text-white text-sm">
+        <div className="border-t mt-10 pt-5 text-center text-sm text-[#4E5A3F]">
+          <p className="leading-relaxed text-[#4E5A3F]">
             تم التطوير بواسطة  
-            <a href="https://www.instagram.com/roya_sow/" className="text-white hover:text-[#9B2D1F] font-semibold hover:underline mx-1">
+            <a
+              href="https://www.instagram.com/mobadeere/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#d3ae27] font-semibold hover:underline mx-1 text-[#4E5A3F]"
+            >
               شركة مُبادر 
             </a>
             بجودة واحترافية

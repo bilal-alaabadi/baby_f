@@ -58,15 +58,15 @@ const TrendingProducts = () => {
                     {products.slice(0, visibleProducts).map((product) => {
                         const price = getFirstPrice(product);
                         const oldPrice = getOldPrice(product);
-                        const discountPercentage = oldPrice ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
+                        const discountPercentage = oldPrice && oldPrice !== price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
                         
                         return (
                             <div 
                                 key={product._id} 
                                 className="product__card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full"
                             >
-                                {oldPrice && (
-                                    <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                                {oldPrice && oldPrice !== price && (
+                                    <div className="absolute top-3 left-3 bg-[#3D4B2E] text-white text-xs font-bold px-2 py-1 rounded-full z-10">
                                         خصم {discountPercentage}%
                                     </div>
                                 )}
@@ -97,7 +97,7 @@ const TrendingProducts = () => {
                                         <div className="font-medium text-lg">
                                             {price.toFixed(2)} {currency}
                                         </div>
-                                        {oldPrice && (
+                                        {oldPrice && oldPrice !== price && (
                                             <s className="text-gray-500 text-sm">{oldPrice.toFixed(2)} {currency}</s>
                                         )}
                                     </div>
@@ -111,7 +111,7 @@ const TrendingProducts = () => {
             {visibleProducts < products.length && (
                 <div className="product__btn text-center mt-8" dir='rtl'>
                     <button 
-                        className="btn bg-[#9B2D1F] text-white px-6 py-2 rounded-md transition-colors"
+                        className=" hover:bg-[#c19e22] bg-[#4E5A3F] text-white px-6 py-2 rounded-md transition-colors"
                         onClick={loadMoreProducts}
                     >
                         عرض المزيد
@@ -122,4 +122,4 @@ const TrendingProducts = () => {
     );
 };
 
-export default TrendingProducts; 
+export default TrendingProducts;

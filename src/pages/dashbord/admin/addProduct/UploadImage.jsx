@@ -5,6 +5,7 @@ import { getBaseUrl } from '../../../../utils/baseURL';
 const UploadImage = ({ name, setImage }) => {
     const [loading, setLoading] = useState(false);
     const [uploadedUrls, setUploadedUrls] = useState([]);
+    const [primaryImageIndex, setPrimaryImageIndex] = useState(0); // حالة لتتبع الصورة الرئيسية
 
     // دالة لتحويل الملف إلى base64
     const convertBase64 = (file) => {
@@ -39,8 +40,9 @@ const UploadImage = ({ name, setImage }) => {
             const response = await axios.post(`${getBaseUrl()}/uploadImages`, { images: base64Images });
             const uploadedUrls = response.data;
 
-            setUploadedUrls(uploadedUrls); // حفظ روابط الصور
-            setImage(uploadedUrls); // إرسال الروابط إلى الدالة الأب
+            setUploadedUrls(uploadedUrls);
+            setImage(uploadedUrls);
+            setPrimaryImageIndex(0); // تعيين أول صورة كصورة رئيسية افتراضياً
             alert("تم تحميل الصور بنجاح!");
         } catch (error) {
             console.error("Error uploading images:", error);
@@ -48,6 +50,21 @@ const UploadImage = ({ name, setImage }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // دالة لتغيير الصورة الرئيسية
+    const setAsPrimary = (index) => {
+        setPrimaryImageIndex(index);
+        
+        // إعادة ترتيب الصور بحيث تكون الصورة المختارة أولاً
+        const reorderedUrls = [
+            uploadedUrls[index],
+            ...uploadedUrls.slice(0, index),
+            ...uploadedUrls.slice(index + 1)
+        ];
+        
+        setUploadedUrls(reorderedUrls);
+        setImage(reorderedUrls); // إرسال الترتيب الجديد إلى الدالة الأب
     };
 
     return (
@@ -59,26 +76,41 @@ const UploadImage = ({ name, setImage }) => {
                 id={name}
                 onChange={uploadImages}
                 className="add-product-InputCSS"
-                multiple // السماح باختيار عدة ملفات
+                multiple
             />
             {loading && (
                 <div className="mt-2 text-sm text-blue-600">جاري تحميل الصور...</div>
             )}
             {uploadedUrls.length > 0 && (
                 <div className="mt-4">
-                    <p className="text-sm text-green-600">تم تحميل الصور بنجاح:</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <p className="text-sm text-green-600">
+                        الصورة الرئيسية: <span className="font-bold">الصورة {primaryImageIndex + 1}</span>
+                    </p>
+                    <div className="flex flex-wrap gap-4 mt-2">
                         {uploadedUrls.map((url, index) => (
-                            <img
-                                key={index}
-                                src={url}
-                                alt={`uploaded-image-${index}`}
-                                className="w-20 h-20 object-cover rounded"
-                                onError={(e) => {
-                                    e.target.src = "https://via.placeholder.com/100"; // صورة بديلة في حالة الخطأ
-                                    e.target.alt = "Image not found";
-                                }}
-                            />
+                            <div key={index} className="relative group">
+                                <img
+                                    src={url}
+                                    alt={`uploaded-image-${index}`}
+                                    className={`w-24 h-24 object-cover rounded border-2 ${
+                                        index === primaryImageIndex 
+                                            ? 'border-blue-500' 
+                                            : 'border-transparent'
+                                    }`}
+                                    onError={(e) => {
+                                        e.target.src = "https://via.placeholder.com/100";
+                                        e.target.alt = "Image not found";
+                                    }}
+                                />
+                                {index !== primaryImageIndex && (
+                                    <button
+                                        onClick={() => setAsPrimary(index)}
+                                        className="absolute inset-0 bg-black bg-opacity-50 text-white text-xs font-bold hidden group-hover:flex items-center justify-center rounded"
+                                    >
+                                        تعيين كرئيسية
+                                    </button>
+                                )}
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -87,4 +119,4 @@ const UploadImage = ({ name, setImage }) => {
     );
 };
 
-export default UploadImage; 
+export default UploadImage;
