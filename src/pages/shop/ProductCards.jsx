@@ -48,7 +48,7 @@ const ProductCards = ({ products }) => {
                     {price.toFixed(2)} {currency}
                 </div>
                 {showDiscount && (
-                    <s className="text-gray-500 text-sm">{oldPrice.toFixed(2)} {currency}</s>
+                    <s className="text-red-500 text-sm">{oldPrice.toFixed(2)} {currency}</s>
                 )}
             </div>
         );

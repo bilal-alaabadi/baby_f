@@ -129,7 +129,7 @@ const SingleProduct = () => {
                         <div className='text-xl text-[#3D4B2E] mb-4 space-x-1'>
                             {price.toFixed(2)} {currency}
                             {showDiscount && (
-                                <s className="text-gray-500 text-sm ml-2">{oldPrice.toFixed(2)} {currency}</s>
+                                <s className="text-red-500 text-sm ml-2">{oldPrice.toFixed(2)} {currency}</s>
                             )}
                         </div>
 

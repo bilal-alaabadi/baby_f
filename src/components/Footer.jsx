@@ -1,61 +1,123 @@
-import React from 'react';
-import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
+import React from "react";
+import log from "../assets/الانثور.png"; // شعار الأنثور
+import {
+  SiVisa,
+  SiMastercard,
+  SiApplepay,
+  SiPaypal,
+  SiGooglepay,
+} from "react-icons/si";
+import { FaInstagram, FaWhatsapp } from "react-icons/fa";
 
 const Footer = () => {
   return (
-    <footer className="bg-[#e2e5e5] py-5">
-      <div className="mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center md:text-right">
-          
-          {/* قسم قصتنا */}
-          <div className='text-[#4E5A3F]'>
-            <h4 className="text-lg font-bold mb-4 text-[#4E5A3F]">قصتنا</h4>
-            <ul className="space-y-2 text-[#4E5A3F]">
+    <footer className="bg-[#e2e5e5]">
+      {/* ===== شريط علوي FULL-BLEED بعرض الشاشة بالكامل ===== */}
+      <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-hidden">
+        {/* الخلفية المنحنية */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox="0 0 100 36"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path d="M28 0 H100 V36 H28 A28 28 0 0 1 28 0 Z" fill="#7c7e60" />
+        </svg>
+
+        {/* محتوى الشريط */}
+        <div className="relative max-w-7xl mx-auto px-4 py-8 md:py-12">
+          {/* ملاحظة: أبقينا الخصائص كما هي (لا تغيّر في مكان الشعار) */}
+          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+            {/* الشعار (كما هو) */}
+            <div className="shrink-0 self-start">
+              <img
+                src={log}
+                alt="شعار الأنثور"
+                className="w-28 md:w-40 object-contain select-none pointer-events-none"
+              />
+            </div>
+
+            {/* وسائل الدفع — تعديل فقط هنا */}
+            <div className="text-white w-full md:w-auto md:ml-auto md:self-center">
+              {/* غلاف كامل العرض لدفع المحتوى لأقصى اليمين */}
+              <div className="w-full flex justify-end">
+                {/* صف الأيقونات — أقصى اليمين دائمًا وبحجم متناسق مع الشعار */}
+                <div className="flex items-center gap-5 md:gap-6 mb-3 md:mb-4">
+                  <SiVisa className="text-3xl md:text-4xl drop-shadow-sm" />
+                  <SiMastercard className="text-3xl md:text-4xl drop-shadow-sm" />
+                  <SiApplepay className="text-3xl md:text-4xl drop-shadow-sm" />
+                  {/* <SiPaypal className="text-3xl md:text-4xl drop-shadow-sm" /> */}
+                  <SiGooglepay className="text-3xl md:text-4xl drop-shadow-sm" />
+                </div>
+              </div>
+
+              <p className="text-right text-lg md:text-2xl font-semibold leading-relaxed">
+                وسائل دفع متعددة
+                <br />
+                اختر وسيلة الدفع المناسبة
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* ===== نهاية الشريط العلوي ===== */}
+
+      {/* الأقسام السفلية */}
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="py-10 grid grid-cols-1 md:grid-cols-3 gap-10 text-[#4E5A3F] md:text-right text-center">
+          {/* الأنثور */}
+          <div>
+            <h4 className="text-xl font-bold mb-3">الانثور</h4>
+            <p className="text-sm leading-7">
+              نهتم بجمع التراث والأصالة في باقات عطرية فريدة. منذ تأسيسنا ونحن
+              نسعى لإبداع عطور تُحاكي قصصًا، تعبر عن هويتك وتخلّد ذكرياتك، كما
+              نقدم لك تجربة تحمل بين طياتها رائحة التاريخ وعبق المستقبل.
+            </p>
+          </div>
+
+          {/* روابط مهمة */}
+          <div>
+            <h4 className="text-xl font-bold mb-3">روابط مهمة</h4>
+            <ul className="space-y-2 text-sm">
               <li>
-                <a href="/about" className="transition-colors duration-300 hover:text-[#d3ae27] text-[#4E5A3F]">
-                  تعرف على متجر الأنثور 
+                <a href="/about" className="hover:text-[#d3ae27] transition">
+                  من نحن
+                </a>
+              </li>
+              <li>
+              
+              </li>
+              <li>
+                <a
+                  href="/return-policy"
+                  className="hover:text-[#d3ae27] transition"
+                >
+                  سياسة الاستبدال والاسترجاع
                 </a>
               </li>
             </ul>
           </div>
-          
-          {/* قسم المنتجات */}
-          <div className='text-[#4E5A3F]'>
-            <h4 className="text-lg font-bold mb-4 text-[#4E5A3F]">عن المتجر</h4>
-            <ul className="space-y-2 text-[#4E5A3F]">
-              <li>
-                <a href="/shop" className="transition-colors duration-300 hover:text-[#d3ae27] text-[#4E5A3F]">المنتجات</a>
-              </li>
-            </ul>
-          </div>
-          
-          {/* قسم الشروط */}
-          <div className='text-[#4E5A3F]'>
-            <h4 className="text-lg font-bold mb-4 text-[#4E5A3F]">الشروط والأحكام</h4>
-            <ul className="space-y-2 text-[#4E5A3F]">
-              <li>
-                <a href="/return-policy" className="transition-colors hover:text-[#d3ae27] duration-300 text-[#4E5A3F]">سياسة الاسترجاع</a>
-              </li>
-            </ul>
-          </div>
-          
-          {/* قسم التواصل */}
-          <div className='text-[#4E5A3F]'>
-            <h4 className="text-lg font-bold mb-4 text-[#4E5A3F]">وسائل التواصل</h4>
-            <div className="flex justify-center md:justify-end gap-4 text-[#4E5A3F]">
+
+          {/* تواصل معنا */}
+          <div>
+            <h4 className="text-xl font-bold mb-3">تواصل معنا</h4>
+            <p className="text-sm mb-4">+96895441416</p>
+            <div className="flex justify-center md:justify-start gap-4">
               <a
-                href="https://www.instagram.com/al__anthur/reels/"
+                href="https://www.instagram.com/al__anthur/"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noreferrer"
                 className="hover:text-[#d3ae27] transition"
+                aria-label="Instagram"
               >
                 <FaInstagram className="text-xl" />
               </a>
               <a
-                href="https://api.whatsapp.com/send/?phone=96895441416&text&type=phone_number&app_absent=0"
+                href="https://api.whatsapp.com/send/?phone=96895441416"
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noreferrer"
                 className="hover:text-[#d3ae27] transition"
+                aria-label="WhatsApp"
               >
                 <FaWhatsapp className="text-xl" />
               </a>
@@ -63,21 +125,19 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* حقوق النشر */}
-        <div className="border-t mt-10 pt-5 text-center text-sm text-[#4E5A3F]">
-          <p className="leading-relaxed text-[#4E5A3F]">
-            تم التطوير بواسطة  
-            <a
-              href="https://www.instagram.com/mobadeere/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#d3ae27] font-semibold hover:underline mx-1 text-[#4E5A3F]"
-            >
-              شركة مُبادر 
-            </a>
-            بجودة واحترافية
-          </p>
-        </div>
+        {/* الحقوق */}
+<div className="border-t border-[#4E5A3F]/30 pt-4 pb-8 text-center text-sm text-[#4E5A3F]">
+  جميع الحقوق محفوظة لدى متجر الأنثور —{" "}
+  <a 
+    href="https://www.instagram.com/mobadeere/" 
+    target="_blank" 
+    rel="noopener noreferrer" 
+    className="underline hover:text-[#2e3528] transition-colors"
+  >
+    تصميم مبادر
+  </a>
+</div>
+
       </div>
     </footer>
   );

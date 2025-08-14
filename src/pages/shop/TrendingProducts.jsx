@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import RatingStars from '../../components/RatingStars';
 import { useFetchAllProductsQuery } from '../../redux/features/products/productsApi';
 import { useSelector } from 'react-redux';
+import log from "../../assets/الانثور.png"; // شعار الأنثور
 
 const TrendingProducts = () => {
     const [visibleProducts, setVisibleProducts] = useState(4);
@@ -46,12 +47,36 @@ const TrendingProducts = () => {
 
     return (
         <section className="section__container product__container">
-            <h2 className="section__header text-3xl font-bold text-[#e2e5e5] mb-4">
-                منتجات جديدة
-            </h2>
-            <p className="section__subheader text-lg text-gray-600 mb-12" dir='rtl'>
-                اكتشف سر الجمال الطبيعي مع تشكيلتنا المختارة من الأعشاب والمنتجات التقليدية الأصيلة!
-            </p>
+<div className="relative text-center" dir="rtl">
+  {/* العنوانين */}
+  <h2 className="text-[32px] font-normal text-[#c8c5b9] mb-1">
+أستكشف مجموعاتنا المميزة
+  </h2>
+  <p className="text-[32px] font-bold text-[#3c3c3c] mb-4">
+    عبر أقسامنا الفريدة
+  </p>
+
+  {/* الشعار مع الخطين */}
+  <div className="flex items-center justify-center gap-3 relative z-10">
+    <span className="flex-1 max-w-[100px] h-px bg-[#c8c5b9]"></span>
+    <img
+      src={log}
+      alt="شعار الأنثور"
+      className="h-20 w-auto object-contain"
+    />
+    <span className="flex-1 max-w-[100px] h-px bg-[#c8c5b9]"></span>
+  </div>
+
+  {/* الشعار كخلفية نصف ظاهر */}
+  <img
+    src={log}
+    alt="شعار الأنثور"
+    className="absolute top-1/2 -left-[100px] transform -translate-y-1/2 w-[300px] md:w-[400px] opacity-10 pointer-events-none select-none"
+    style={{ zIndex: 0 }}
+  />
+</div>
+
+
 
             <div className="mt-12" dir='rtl'>
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -98,7 +123,7 @@ const TrendingProducts = () => {
                                             {price.toFixed(2)} {currency}
                                         </div>
                                         {oldPrice && oldPrice !== price && (
-                                            <s className="text-gray-500 text-sm">{oldPrice.toFixed(2)} {currency}</s>
+                                            <s className="text-red-500 text-sm">{oldPrice.toFixed(2)} {currency}</s>
                                         )}
                                     </div>
                                 </div>

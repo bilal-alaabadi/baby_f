@@ -1,3 +1,8 @@
+// components/Checkout.jsx
+// تعديلين مطلوبين:
+// 1) إزالة اشتراط تسجيل الدخول.
+// 2) الحفاظ على السلة كما هي بعد الإتمام (لا نقوم بتفريغها تلقائياً).
+
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RiBankCardLine } from "react-icons/ri";
@@ -9,51 +14,39 @@ const Checkout = () => {
   const [error, setError] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [wilayat, setWilayat] = useState('');
   const [description, setDescription] = useState('');
 
   const { products, totalPrice, country } = useSelector((state) => state.cart);
-  const { user } = useSelector(state => state.auth);
 
-  // سعر الشحن الأساسي بالريال العماني
-  const baseShippingFee = country === 'الإمارات'? 0.1 : 0.1;
-
-  // العملة وسعر الصرف حسب البلد
+  const baseShippingFee = country === 'الإمارات'? 4 : 2;
   const currency = country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = country === 'الإمارات' ? 9.5 : 1;
-
   const shippingFee = baseShippingFee * exchangeRate;
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login', { state: { from: '/checkout' } });
-      return;
-    }
-
     if (products.length === 0) {
       setError("لا توجد منتجات في السلة. الرجاء إضافة منتجات قبل المتابعة إلى الدفع.");
     } else {
       setError('');
     }
-  }, [user, products, navigate]);
+  }, [products]);
 
   const makePayment = async (e) => {
     e.preventDefault();
-
-    if (!user) {
-      navigate('/login');
-      return;
-    }
 
     if (products.length === 0) {
       setError("لا توجد منتجات في السلة. الرجاء إضافة منتجات قبل المتابعة إلى الدفع.");
       return;
     }
 
-    if (!customerName || !customerPhone || !country || !wilayat) {
-      setError("الرجاء إدخال جميع المعلومات المطلوبة (الاسم، رقم الهاتف، البلد، العنوان)");
+    if (!customerName || !customerPhone || !country || !wilayat || !email) {
+      setError("الرجاء إدخال جميع المعلومات المطلوبة (الاسم، رقم الهاتف، الإيميل، البلد، العنوان)");
       return;
     }
+
+    // ملاحظة: لا نقوم بتعديل حالة السلة هنا إطلاقاً (لا تفريغ تلقائي).
 
     const body = {
       products: products.map(product => ({
@@ -68,15 +61,14 @@ const Checkout = () => {
       country,
       wilayat,
       description,
-      email: user?.email
+      email
     };
 
     try {
       const response = await fetch(`${getBaseUrl()}/api/orders/create-checkout-session`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${user.token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(body)
       });
@@ -89,6 +81,7 @@ const Checkout = () => {
       const session = await response.json();
 
       if (session.paymentLink) {
+        // لا تقم بتغيير السلة — فقط نوجّه المستخدم لصفحة الدفع
         window.location.href = session.paymentLink;
       } else {
         setError("حدث خطأ أثناء إنشاء رابط الدفع. الرجاء المحاولة مرة أخرى.");
@@ -98,10 +91,6 @@ const Checkout = () => {
       setError(error.message || "حدث خطأ أثناء عملية الدفع. الرجاء المحاولة مرة أخرى.");
     }
   };
-
-  if (!user) {
-    return null;
-  }
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto flex flex-col md:flex-row gap-8">
@@ -131,6 +120,18 @@ const Checkout = () => {
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 required
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 mb-2">البريد الإلكتروني</label>
+              <input
+                type="email"
+                className="w-full p-2 border rounded-md"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="example@email.com"
               />
             </div>
 
