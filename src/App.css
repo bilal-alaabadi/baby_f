@@ -1,6 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;800&family=Poppins:wght@400;500;600;700&display=swap");
 
 :root {
+    --brand: #92B0B0;       /* اللون الأساسي للنصوص والأيقونات */
+  --brand-dark: #3a4733;  /* درجة أغمق للهفر */
+  --accent: #92B0B0;      /* لون مميز للشارات والعناصر التفاعلية */
   --primary-color: #ed3849;
   --primary-color-dark: #d23141;
   --primary-color-light:  #eff6ff;

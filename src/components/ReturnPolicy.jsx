@@ -2,51 +2,75 @@ import React from 'react';
 
 const ReturnPolicy = () => {
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4" dir='rtl'>
-      <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-sm">
+    <div className="min-h-screen bg-gray-50 py-12 px-4" dir="rtl">
+      <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
         {/* العنوان الرئيسي */}
-        <h1 className="text-3xl md:text-4xl font-bold text-center text-[#9B2D1F] mb-8">
-          سياسة الاسترجاع - الضمان الذهبي
+        <h1 className="text-3xl md:text-4xl font-bold text-center text-[#3D4B2E] mb-8">
+          سياسة الاسترجاع والاستبدال
         </h1>
-        
-        {/* مقدمة الصفحة */}
-        <div className="mb-10 text-right">
-          <p className="text-2xl text-gray-800 mb-6 leading-relaxed">
-            في <span className="font-bold text-[#d3ae27]">الأنثور</span>، نقدم لكم ضماناً ذهبياً لرضاكم
+
+        {/* المدة */}
+        <section className="mb-8">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#3D4B2E] mb-3">المدة</h2>
+          <p className="text-gray-700 leading-relaxed">
+            يمكنك طلب استرجاع أو استبدال المنتج خلال <span className="font-semibold">5 أيام</span> من تاريخ الاستلام.
           </p>
-        </div>
+        </section>
 
-        {/* البنود الأساسية */}
-        <div className="space-y-8 text-right">
-          {/* البند الرئيسي */}
-          <div className="border-b border-[#d3ae27] pb-6">
-            <h3 className="text-2xl font-bold text-[#9B2D1F] mb-4">الضمان الذهبي</h3>
-            <p className="text-xl text-gray-700 leading-relaxed">
-              يحق للزبون استرجاع المنتج في حال:
-            </p>
-            <ul className="text-xl text-gray-700 mt-4 space-y-3 list-disc pr-6">
-              <li>عدم ثبات العطر لأكثر من <span className="font-semibold">24 ساعة</span></li>
-              <li>عدم استمرار فوحان الرائحة لأكثر من <span className="font-semibold">6 ساعات</span></li>
-            </ul>
-          </div>
-
-          {/* شروط إضافية */}
-          <div className="pt-4">
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">ملاحظات هامة:</h3>
-            <p className="text-lg text-gray-600 leading-relaxed">
-              • يجب أن يكون المنتج في عبوته الأصلية ولم يتم استخدام أكثر من 10% منه
-            </p>
-            <p className="text-lg text-gray-600 leading-relaxed mt-2">
-              • يرجى التواصل مع خدمة العملاء خلال 3 أيام من الاستلام
-            </p>
-          </div>
-        </div>
-
-        {/* خاتمة الصفحة */}
-        <div className="mt-12 text-center">
-          <p className="text-xl text-[#9B2D1F] font-medium">
-            الأنثور - حيث الجودة والثبات ليست مجرد وعود
+        {/* حالة المنتج */}
+        <section className="mb-8">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#3D4B2E] mb-3">حالة المنتج</h2>
+          <p className="text-gray-700 leading-relaxed">
+            يُشترط أن يكون المنتج غير مستخدم، وبحالته الأصلية مع العلبة والتغليف.
           </p>
+        </section>
+
+        {/* متى يحق الاسترجاع أو الاستبدال؟ */}
+        <section className="mb-8">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#3D4B2E] mb-3">
+            متى يحق لك الاسترجاع أو الاستبدال؟
+          </h2>
+          <ul className="list-disc pr-6 space-y-2 text-gray-700">
+            <li>إذا استلمت المنتج وكان فيه كسر، عيب، جزء ناقص، أو لا يعمل بشكل صحيح.</li>
+            <li>إذا رغبت بالاسترجاع خلال 5 أيام وكان المنتج بحالته الأصلية دون استخدام.</li>
+          </ul>
+        </section>
+
+        {/* متى لا يحق الاسترجاع؟ */}
+        <section className="mb-8">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#3D4B2E] mb-3">
+            متى لا يحق الاسترجاع؟
+          </h2>
+          <ul className="list-disc pr-6 space-y-2 text-gray-700">
+            <li>إذا تم استخدام المنتج.</li>
+            <li>إذا تم فتح المنتج وتجربته وكان سليمًا وخاليًا من العيوب.</li>
+          </ul>
+        </section>
+
+        {/* تكاليف الشحن */}
+        <section className="mb-8">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#3D4B2E] mb-3">تكاليف الشحن</h2>
+          <ul className="list-disc pr-6 space-y-2 text-gray-700">
+            <li>
+              في حال كان سبب الاسترجاع عيب في المنتج أو خطأ من المتجر &rarr; نتحمل نحن تكاليف الشحن كاملة.
+            </li>
+            <li>
+              في حال كان سبب الاسترجاع أو الاستبدال رغبة من العميل بدون خطأ من المتجر &rarr; يتحمل العميل تكاليف الشحن.
+            </li>
+          </ul>
+        </section>
+
+        {/* استرداد المبلغ */}
+        <section className="mb-2">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#3D4B2E] mb-3">استرداد المبلغ</h2>
+          <p className="text-gray-700 leading-relaxed">
+            يتم إرجاع المبلغ للعميل خلال <span className="font-semibold">5 – 10 أيام عمل</span> بعد استلام المنتج وفحصه.
+          </p>
+        </section>
+
+        {/* فاصل جمالي */}
+        <div className="mt-10 text-center">
+          <span className="inline-block h-1 w-24 rounded-full bg-[#d3ae27]" />
         </div>
       </div>
     </div>

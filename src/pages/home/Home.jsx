@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Banner from './Banner';
 import TrendingProducts from '../shop/TrendingProducts';
-import log from "../../assets/الانثور (1).png"; // شعار الأنثور
+import log from "../../assets/logo.png"; // شعار الأنثور
 
 const Home = () => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);

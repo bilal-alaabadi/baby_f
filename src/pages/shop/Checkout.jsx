@@ -1,8 +1,3 @@
-// components/Checkout.jsx
-// تعديلين مطلوبين:
-// 1) إزالة اشتراط تسجيل الدخول.
-// 2) الحفاظ على السلة كما هي بعد الإتمام (لا نقوم بتفريغها تلقائياً).
-
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RiBankCardLine } from "react-icons/ri";
@@ -20,10 +15,15 @@ const Checkout = () => {
 
   const { products, totalPrice, country } = useSelector((state) => state.cart);
 
-  const baseShippingFee = country === 'الإمارات'? 4 : 2;
+  // العملة وسعر الصرف للعرض فقط
   const currency = country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = country === 'الإمارات' ? 9.5 : 1;
-  const shippingFee = baseShippingFee * exchangeRate;
+
+  // ✅ حساب الشحن بالتدرج (بالريال العُماني) ثم تحويله للعرض
+  const subtotalOMR = Number(totalPrice) || 0;
+  const shippingFeeOMR = subtotalOMR < 10 ? 2 : (subtotalOMR <= 20 ? 1 : 0);
+  const shippingFeeDisplay = (shippingFeeOMR * exchangeRate).toFixed(2);
+  const grandTotalDisplay = ((subtotalOMR + shippingFeeOMR) * exchangeRate).toFixed(2);
 
   useEffect(() => {
     if (products.length === 0) {
@@ -46,8 +46,7 @@ const Checkout = () => {
       return;
     }
 
-    // ملاحظة: لا نقوم بتعديل حالة السلة هنا إطلاقاً (لا تفريغ تلقائي).
-
+    // لا نرسل رسوم الشحن؛ السيرفر يحسبها حسب القاعدة
     const body = {
       products: products.map(product => ({
         _id: product._id,
@@ -67,9 +66,7 @@ const Checkout = () => {
     try {
       const response = await fetch(`${getBaseUrl()}/api/orders/create-checkout-session`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
 
@@ -81,7 +78,6 @@ const Checkout = () => {
       const session = await response.json();
 
       if (session.paymentLink) {
-        // لا تقم بتغيير السلة — فقط نوجّه المستخدم لصفحة الدفع
         window.location.href = session.paymentLink;
       } else {
         setError("حدث خطأ أثناء إنشاء رابط الدفع. الرجاء المحاولة مرة أخرى.");
@@ -98,7 +94,7 @@ const Checkout = () => {
       <div className="flex-1">
         <h1 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">تفاصيل الفاتورة</h1>
         {error && <div className="text-red-500 mb-4">{error}</div>}
-        
+
         <form onSubmit={makePayment} className="space-y-4 md:space-y-6" dir="rtl">
           <div className="space-y-4">
             <div>
@@ -171,7 +167,7 @@ const Checkout = () => {
 
           <button
             type="submit"
-            className="bg-[#799b52] text-white px-6 py-3 rounded-md w-full"
+            className="bg-[#92B0B0] text-white px-6 py-3 rounded-md w-full"
             disabled={products.length === 0}
           >
             إتمام الطلب
@@ -194,13 +190,13 @@ const Checkout = () => {
 
           <div className="flex justify-between items-center pt-2 border-t border-gray-200">
             <span className="text-gray-800">رسوم الشحن</span>
-            <p className="text-gray-900">{currency}{shippingFee.toFixed(2)}</p>
+            <p className="text-gray-900">{currency}{shippingFeeDisplay}</p>
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t border-gray-200">
             <span className="text-gray-800 font-semibold">الإجمالي</span>
             <p className="text-gray-900 font-bold">
-              {currency}{((totalPrice + baseShippingFee) * exchangeRate).toFixed(2)}
+              {currency}{grandTotalDisplay}
             </p>
           </div>
         </div>

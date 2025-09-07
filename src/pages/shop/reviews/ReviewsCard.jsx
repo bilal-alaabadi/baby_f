@@ -52,7 +52,7 @@ const ReviewsCard = ({ productReviews }) => {
             <div className='mt-12'>
                 <button
                     onClick={handleOpenReviewModal}
-                    className='px-6 py-3 bg-[#3D4B2E] hover:bg-[#c19e22] text-white rounded-md'> أضفة تعليق</button>
+                    className='px-6 py-3 bg-[#92B0B0] hover:bg-[#c19e22] text-white rounded-md'> أضفة تعليق</button>
             </div>
 
             {/* review modal  */}

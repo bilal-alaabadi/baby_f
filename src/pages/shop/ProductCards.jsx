@@ -68,7 +68,7 @@ const ProductCards = ({ products }) => {
                         className='product__card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full'
                     >
                         {showDiscount && (
-                            <div className="absolute top-3 left-3 bg-[#3D4B2E] text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                            <div className="absolute top-3 left-3 bg-[#92B0B0] text-white text-xs font-bold px-2 py-1 rounded-full z-10">
                                 خصم {discountPercentage}%
                             </div>
                         )}
@@ -95,7 +95,7 @@ const ProductCards = ({ products }) => {
                                         handleAddToCart(product._id, product);
                                     }}
                                     className={`p-2 text-white rounded-full shadow-md transition-all duration-300 ${
-                                        addedItems[product._id] ? 'bg-green-500' : 'bg-[#3D4B2E] hover:bg-[#c19e22]'
+                                        addedItems[product._id] ? 'bg-green-500' : 'bg-[#92B0B0] hover:bg-[#c19e22]'
                                     }`}
                                 >
                                     {addedItems[product._id] ? (

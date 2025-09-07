@@ -1,84 +1,228 @@
 // components/OrderSummary.jsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { clearCart } from '../../redux/features/cart/cartSlice';
+import { clearCart, updateQuantity, removeFromCart } from '../../redux/features/cart/cartSlice';
 import { Link } from 'react-router-dom';
 
 const OrderSummary = ({ onClose }) => {
   const dispatch = useDispatch();
-  const { products, totalPrice, shippingFee, country } = useSelector((store) => store.cart);
-  
+  const { products, totalPrice, country } = useSelector((store) => store.cart);
+
+  // العملة والعرض
   const currency = country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = country === 'الإمارات' ? 9.5 : 1;
-  
-  const grandTotal = (totalPrice + shippingFee) * exchangeRate;
-  const formattedTotalPrice = (totalPrice * exchangeRate).toFixed(2);
-  const formattedShippingFee = (shippingFee * exchangeRate).toFixed(2);
-  const formattedGrandTotal = grandTotal.toFixed(2);
+
+  // المجموع الفرعي بالريال العُماني (نفس وحدة حساب السيرفر)
+  const subtotalOMR = Number(totalPrice) || 0;
+
+  // قاعدة الشحن التدرّجية
+  const shippingFeeOMR = subtotalOMR < 10 ? 2 : (subtotalOMR <= 20 ? 1 : 0);
+
+  // العرض بالعملة المحلية
+  const formattedSubtotal = (subtotalOMR * exchangeRate).toFixed(2);
+  const formattedShipping = (shippingFeeOMR * exchangeRate).toFixed(2);
+  const formattedGrand = ((subtotalOMR + shippingFeeOMR) * exchangeRate).toFixed(2);
+
+  // حساب التحفيز للشحن
+  const incentives = useMemo(() => {
+    const toCheaper = subtotalOMR < 10 ? (10 - subtotalOMR) : 0;
+    const toFree = subtotalOMR < 20 ? (20 - subtotalOMR) : 0;
+
+    return {
+      toCheaper,
+      toFree,
+      toCheaperDisplay: (toCheaper * exchangeRate).toFixed(2),
+      toFreeDisplay: (toFree * exchangeRate).toFixed(2),
+      // تقدّم نحو الشحن المجاني
+      progressToFree: Math.max(0, Math.min(100, Math.round((subtotalOMR / 20) * 100))),
+    };
+  }, [subtotalOMR, exchangeRate]);
 
   const handleClearCart = () => {
     dispatch(clearCart());
   };
 
-  const renderCustomizationDetails = (item) => {
-    if (!item.customization) return null;
-    
-    return (
-      <div className="mt-2 text-sm text-gray-100">
-        {item.customization.length && <p>الطول: {item.customization.length} سم</p>}
-        {item.customization.width && <p>العرض: {item.customization.width} سم</p>}
-        {item.customization.sleeveType && <p>نوع الأكمام: {item.customization.sleeveType}</p>}
-        {item.customization.closureType && <p>نوع الإغلاق: {item.customization.closureType}</p>}
-        {item.customization.color && <p>اللون: {item.customization.color}</p>}
-        {item.customization.notes && <p>ملاحظات: {item.customization.notes}</p>}
-      </div>
-    );
-  };
+  const dec = (id) => dispatch(updateQuantity({ id, type: 'decrement' }));
+  const inc = (id) => dispatch(updateQuantity({ id, type: 'increment' }));
+  const remove = (id) => dispatch(removeFromCart({ id }));
 
   return (
-    <div className='bg-[#758d64] mt-5 rounded text-base' >
-      <div className='px-6 py-4 space-y-5'>
-        <h2 className='text-xl text-white'>ملخص الطلب</h2>
-        
-        <div className="text-white space-y-4">
-          {products.map((item, index) => (
-            <div key={index} className="border-b pb-3">
-              <p>{item.name} × {item.quantity}</p>
-              {item.customization && renderCustomizationDetails(item)}
-              <p className="text-sm mt-1">السعر: {(item.price * exchangeRate * item.quantity).toFixed(2)} {currency}</p>
-            </div>
-          ))}
+    <div className="bg-white mt-5 rounded-lg shadow-md border border-gray-200">
+      <div className="px-6 py-5 space-y-5" dir="rtl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-800">ملخص الطلب</h2>
+          <span className="text-sm text-gray-500">
+            عناصر السلة: {products.reduce((a, b) => a + b.quantity, 0)}
+          </span>
         </div>
-        
-        <div className='text-white'>
-          <p>السعر الفرعي: {formattedTotalPrice} {currency}</p>
-          <p>رسوم الشحن: {formattedShippingFee} {currency}</p>
-          <p className='font-bold mt-2'>الإجمالي النهائي: {formattedGrandTotal} {currency}</p>
+
+        {/* التحفيز على الشراء */}
+        <div className="p-4 rounded-lg bg-gradient-to-r from-amber-100 to-emerald-100 border border-[#92B0B0]">
+          {subtotalOMR < 20 ? (
+            <>
+              {subtotalOMR < 10 ? (
+                <p className="text-emerald-900 text-sm md:text-base">
+                  أضِف <span className="font-semibold">{incentives.toCheaperDisplay} {currency}</span> لتحصل على
+                  شحن أرخص <span className="font-semibold">1 ر.ع</span> فقط.
+                </p>
+              ) : (
+                <p className="text-emerald-900 text-sm md:text-base">
+                  رائع! الشحن الآن <span className="font-semibold">1 ر.ع</span>.
+                  أضِف <span className="font-semibold">{incentives.toFreeDisplay} {currency}</span> لتحصل على
+                  <span className="font-semibold"> شحن مجاني</span>.
+                </p>
+              )}
+
+              <div className="mt-3">
+                <div className="w-full bg-white/70 rounded-full h-2 overflow-hidden border border-emerald-300">
+                  <div
+                    className="h-2 bg-emerald-500"
+                    style={{ width: `${incentives.progressToFree}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[12px] text-emerald-800 mt-1">
+                  <span>0</span>
+                  <span>10</span>
+                  <span>20</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-emerald-900 text-sm md:text-base">
+              🎉 مبروك! حصلت على <span className="font-semibold">شحن مجاني</span>.
+            </p>
+          )}
         </div>
-        
-        <div className='px-4 mb-6'>
+
+        {/* عناصر السلة */}
+        <div className="space-y-4">
+          {products.map((item) => {
+            const stock = Number(item.stock ?? 0); // يجب تمرير stock مع المنتج
+            const atMax = stock > 0 && item.quantity >= stock;
+            const outOfStock = stock === 0;
+
+            return (
+              <div
+                key={item._id}
+                className="border rounded-lg p-3 md:p-4 shadow-sm bg-white"
+              >
+                <div className="flex items-start gap-3">
+                  {/* صورة المنتج (إن وُجدت) */}
+                  <img
+                    src={Array.isArray(item.image) ? item.image[0] : item.image}
+                    alt={item.name}
+                    className="w-16 h-16 object-cover rounded-md border"
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/64';
+                    }}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-semibold text-gray-800">{item.name}</h3>
+                      <button
+                        onClick={() => remove(item._id)}
+                        className="text-red-500 hover:text-red-600 text-sm"
+                        title="حذف المنتج"
+                      >
+                        إزالة
+                      </button>
+                    </div>
+
+                    {/* تحكم الكمية مع الربط بالمخزون */}
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        onClick={() => dec(item._id)}
+                        className="w-8 h-8 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        disabled={item.quantity <= 1}
+                        title="تقليل الكمية"
+                      >
+                        –
+                      </button>
+                      <span className="px-3 py-1 rounded bg-gray-50 border text-gray-800">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => inc(item._id)}
+                        className={`w-8 h-8 rounded-md border ${
+                          atMax || outOfStock
+                            ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                        disabled={atMax || outOfStock}
+                        title={atMax ? 'بلغت الحد المتاح من المخزون' : 'زيادة الكمية'}
+                      >
+                        +
+                      </button>
+
+                      {/* شارة المخزون */}
+                      <div className="ms-2">
+                        {outOfStock ? (
+                          <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">
+                            غير متوفر حالياً
+                          </span>
+                        ) : atMax ? (
+                          <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                            وصلت للكمية المتاحة ({stock})
+                          </span>
+                        ) : (
+                          <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            المتوفر: {stock}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* السعر الإجمالي للعنصر */}
+                    <div className="mt-2 text-sm text-gray-700">
+                      السعر: {(item.price * exchangeRate * item.quantity).toFixed(2)} {currency}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* الإجماليات */}
+        <div className="rounded-lg border bg-gray-50 p-4">
+          <div className="flex justify-between text-gray-700">
+            <span>السعر الفرعي</span>
+            <span className="font-medium">{formattedSubtotal} {currency}</span>
+          </div>
+          <div className="flex justify-between text-gray-700 mt-1">
+            <span>رسوم الشحن</span>
+            <span className="font-medium">{formattedShipping} {currency}</span>
+          </div>
+          <div className="flex justify-between text-gray-900 mt-3 border-t pt-3">
+            <span className="font-semibold">الإجمالي النهائي</span>
+            <span className="font-bold">{formattedGrand} {currency}</span>
+          </div>
+        </div>
+
+        {/* أزرار الإجراءات */}
+        <div className="px-1 mb-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleClearCart();
             }}
-            className='bg-red-500 px-3 py-1.5 text-white mt-2 rounded-md flex justify-between items-center mb-4 hover:bg-red-600 transition-colors'
+            className="w-full bg-red-500 px-3 py-2 text-white mt-2 rounded-md flex justify-center items-center gap-2 hover:bg-red-600 transition-colors"
           >
-            <span className='mr-2'>تفريغ السلة</span>
-            <i className="ri-delete-bin-7-line"></i>
+            <i className="ri-delete-bin-7-line" />
+            <span>تفريغ السلة</span>
           </button>
-          <Link to="/checkout">
+
+          <Link to="/checkout" onClick={onClose}>
             <button
-              onClick={onClose}
-              className='bg-green-600 px-3 py-1.5 text-white mt-2 rounded-md flex justify-between items-center hover:bg-green-700 transition-colors '
+              className="w-full bg-emerald-600 px-3 py-2 text-white mt-3 rounded-md flex justify-center items-center gap-2 hover:bg-emerald-700 transition-colors"
             >
-              <span className='mr-2'>إتمام الشراء</span>
-              <i className="ri-bank-card-line"></i>
+              <i className="ri-bank-card-line" />
+              <span>إتمام الشراء</span>
             </button>
           </Link>
         </div>
       </div>
-    </div> 
+    </div>
   );
 };
 

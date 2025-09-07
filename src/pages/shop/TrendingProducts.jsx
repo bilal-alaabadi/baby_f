@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import RatingStars from '../../components/RatingStars';
 import { useFetchAllProductsQuery } from '../../redux/features/products/productsApi';
 import { useSelector } from 'react-redux';
-import log from "../../assets/الانثور.png"; // شعار الأنثور
+import log from "../../assets/logo.png"; // شعار الأنثور
 
 const TrendingProducts = ({ onProductsLoaded }) => {
   const [visibleProducts, setVisibleProducts] = useState(4);
@@ -67,8 +67,8 @@ const TrendingProducts = ({ onProductsLoaded }) => {
     <section className="section__container product__container">
       <div className="relative text-center" dir="rtl">
         {/* العنوانين */}
-        <h2 className="text-[32px] font-normal text-[#c8c5b9] mb-1">أستكشف مجموعاتنا المميزة</h2>
-        <p className="text-[32px] font-bold text-[#3c3c3c] mb-4">عبر أقسامنا الفريدة</p>
+        <h2 className="text-[32px] font-normal text-[#92B0B0] mb-1">أستكشف مجموعاتنا المميزة</h2>
+        <p className="text-[32px] font-bold text-[#F79B6A] mb-4">عبر أقسامنا الفريدة</p>
 
         {/* الشعار مع الخطين */}
         <div className="flex items-center justify-center gap-3 relative z-10">
@@ -100,7 +100,7 @@ const TrendingProducts = ({ onProductsLoaded }) => {
                 className="product__card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative flex flex-col h-full"
               >
                 {oldPrice && oldPrice !== price && (
-                  <div className="absolute top-3 left-3 bg-[#3D4B2E] text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                  <div className="absolute top-3 left-3 bg-[#F79B6A] text-white text-xs font-bold px-2 py-1 rounded-full z-10">
                     خصم {discountPercentage}%
                   </div>
                 )}

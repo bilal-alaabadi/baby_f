@@ -63,7 +63,7 @@ const Register = () => {
 
                     <button
                         type='submit'
-                        className='w-full mt-5 bg-[#3D4B2E] text-white hover:bg-indigo-500 font-medium py-3 rounded-md'
+                        className='w-full mt-5 bg-[#92B0B0] text-white hover:bg-indigo-500 font-medium py-3 rounded-md'
                     >
                         تسجيل
                     </button>

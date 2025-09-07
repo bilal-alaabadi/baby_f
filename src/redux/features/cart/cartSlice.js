@@ -17,8 +17,13 @@ const initialState = loadState() || {
   products: [],
   selectedItems: 0,
   totalPrice: 0,
-  shippingFee: 2,
+  shippingFee: 2, // لم يعد يُستخدم للحساب؛ يترك للتوافق
   country: 'عمان',
+};
+
+const clampToStock = (qty, stock) => {
+  if (typeof stock !== 'number' || Number.isNaN(stock) || stock <= 0) return Math.max(0, qty);
+  return Math.min(qty, stock);
 };
 
 const cartSlice = createSlice({
@@ -26,70 +31,72 @@ const cartSlice = createSlice({
   initialState,
   reducers: {
     addToCart: (state, action) => {
-      const existingProduct = state.products.find(
-        (product) => product._id === action.payload._id
-      );
+      const incoming = action.payload;
+      const id = incoming._id;
+      const stock = typeof incoming.stock === 'number' ? incoming.stock : undefined;
 
-      if (existingProduct) {
-        existingProduct.quantity += 1;
+      const existing = state.products.find((p) => p._id === id);
+      if (existing) {
+        const desired = existing.quantity + 1;
+        existing.quantity = clampToStock(desired, existing.stock ?? stock);
       } else {
-        state.products.push({ 
-          ...action.payload, 
-          quantity: 1,
-          // نسخ بيانات التخصيص إذا وجدت
-          ...(action.payload.customization && { 
-            customization: action.payload.customization 
-          })
+        const initialQty = clampToStock(1, stock);
+        state.products.push({
+          ...incoming,
+          stock, // خزّن المخزون مع العنصر
+          quantity: initialQty,
+          ...(incoming.customization && { customization: incoming.customization }),
         });
       }
 
       state.selectedItems = setSelectedItems(state);
       state.totalPrice = setTotalPrice(state);
-      
-      // حفظ الحالة في localStorage
       saveState(state);
     },
+
     updateQuantity: (state, action) => {
-      const product = state.products.find(p => p._id === action.payload.id);
+      const { id, type } = action.payload;
+      const product = state.products.find((p) => p._id === id);
       if (product) {
-        if (action.payload.type === 'increment') {
-          product.quantity += 1;
-        } else if (action.payload.type === 'decrement' && product.quantity > 1) {
-          product.quantity -= 1;
+        if (type === 'increment') {
+          const desired = product.quantity + 1;
+          product.quantity = clampToStock(desired, product.stock);
+        } else if (type === 'decrement') {
+          product.quantity = Math.max(1, product.quantity - 1);
         }
       }
+      state.selectedItems = setSelectedItems(state);
+      state.totalPrice = setTotalPrice(state);
+      saveState(state);
+    },
 
-      state.selectedItems = setSelectedItems(state);
-      state.totalPrice = setTotalPrice(state);
-      saveState(state);
-    },
     removeFromCart: (state, action) => {
-      state.products = state.products.filter(
-        (product) => product._id !== action.payload.id
-      );
+      state.products = state.products.filter((p) => p._id !== action.payload.id);
       state.selectedItems = setSelectedItems(state);
       state.totalPrice = setTotalPrice(state);
       saveState(state);
     },
+
     clearCart: (state) => {
       state.products = [];
       state.selectedItems = 0;
       state.totalPrice = 0;
       saveState(state);
     },
+
     setCountry: (state, action) => {
       state.country = action.payload;
+      // shippingFee ثابت قديم للتوافق؛ الحساب الفعلي يتم عند العرض/الدفع
       state.shippingFee = action.payload === 'الإمارات' ? 4 : 2;
       saveState(state);
     },
-    // إضافة رديف لتحميل الحالة من السيرفر إذا لزم الأمر
-    loadCart: (state, action) => {
-      return action.payload;
-    }
+
+    // في حال أردت تحميل الحالة من الخادم مستقبلاً
+    loadCart: (state, action) => action.payload,
   },
 });
 
-// دالة مساعدة لحفظ الحالة في localStorage
+// دوال حفظ وحساب
 const saveState = (state) => {
   try {
     const serializedState = JSON.stringify(state);
@@ -108,11 +115,11 @@ export const setTotalPrice = (state) =>
     0
   );
 
-export const { 
-  addToCart, 
-  updateQuantity, 
-  removeFromCart, 
-  clearCart, 
+export const {
+  addToCart,
+  updateQuantity,
+  removeFromCart,
+  clearCart,
   setCountry,
   loadCart
 } = cartSlice.actions;

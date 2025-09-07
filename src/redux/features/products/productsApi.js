@@ -9,7 +9,7 @@ const productsApi = createApi({
   }),
   tagTypes: ["Product", "ProductList"],
   endpoints: (builder) => ({
-    // جلب جميع المنتجات مع إمكانية التصفية والترتيب
+
     fetchAllProducts: builder.query({
       query: ({
         category,
@@ -26,7 +26,6 @@ const productsApi = createApi({
           limit: limit.toString(),
           sort,
         };
-
         if (category && category !== "الكل") params.category = category;
         if (gender) params.gender = gender;
         if (minPrice) params.minPrice = minPrice;
@@ -50,30 +49,37 @@ const productsApi = createApi({
           : ["ProductList"],
     }),
 
-fetchProductById: builder.query({
-  query: (id) => `/product/${id}`, // تغيير المسار هنا
-  transformResponse: (response) => {
-    if (!response?.product) {
-      throw new Error('المنتج غير موجود');
-    }
-    
-    const { product } = response;
-    return {
-      _id: product._id,
-      name: product.name,
-      category: product.category,
-      size: product.size || '',
-      price: product.price,
-      oldPrice: product.oldPrice || '',
-      description: product.description,
-      image: Array.isArray(product.image) ? product.image : [product.image],
-      author: product.author
-    };
-  },
-  providesTags: (result, error, id) => [{ type: "Product", id }],
-}),
+    // ✅ إصلاح: إرجاع stock + reviews + باقي الحقول
+    fetchProductById: builder.query({
+      query: (id) => `/product/${id}`,
+      transformResponse: (response) => {
+        const product = response?.product;
+        if (!product) {
+          throw new Error("المنتج غير موجود");
+        }
+        return {
+          _id: product._id,
+          name: product.name,
+          mainCategory: product.mainCategory,
+          category: product.category,
+          size: product.size || "",
+          price: product.price,
+          oldPrice: product.oldPrice ?? "",
+          description: product.description,
+          image: Array.isArray(product.image) ? product.image : [product.image],
+          author: product.author,
+          // 👇 مهم:
+          stock: typeof product.stock === "string" ? Number(product.stock) : (product.stock ?? 0),
+          rating: product.rating ?? 0,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+          // المراجعات كما أرسلها السيرفر
+          reviews: Array.isArray(response.reviews) ? response.reviews : [],
+        };
+      },
+      providesTags: (result, error, id) => [{ type: "Product", id }],
+    }),
 
-    // جلب المنتجات المرتبطة (منتجات مشابهة)
     fetchRelatedProducts: builder.query({
       query: (id) => `/related/${id}`,
       providesTags: (result, error, id) => [
@@ -82,7 +88,6 @@ fetchProductById: builder.query({
       ],
     }),
 
-    // إضافة منتج جديد
     addProduct: builder.mutation({
       query: (newProduct) => ({
         url: "/create-product",
@@ -92,7 +97,6 @@ fetchProductById: builder.query({
       invalidatesTags: ["ProductList"],
     }),
 
-    // تحديث المنتج
     updateProduct: builder.mutation({
       query: ({ id, body }) => ({
         url: `/update-product/${id}`,
@@ -106,7 +110,6 @@ fetchProductById: builder.query({
       ],
     }),
 
-    // حذف المنتج
     deleteProduct: builder.mutation({
       query: (id) => ({
         url: `/${id}`,
@@ -118,16 +121,21 @@ fetchProductById: builder.query({
       ],
     }),
 
-    // بحث عن المنتجات
     searchProducts: builder.query({
       query: (searchTerm) => `/search?q=${searchTerm}`,
       transformResponse: (response) => {
-        return response.map(product => ({
+        return response.map((product) => ({
           ...product,
-          price: product.category === 'حناء بودر' 
-            ? product.price 
-            : product.regularPrice,
+          price:
+            product.category === "حناء بودر"
+              ? product.price
+              : product.regularPrice,
           images: Array.isArray(product.image) ? product.image : [product.image],
+          // اختياري: تمرير المخزون لو محتاجه في نتائج البحث
+          stock:
+            typeof product.stock === "string"
+              ? Number(product.stock)
+              : (product.stock ?? 0),
         }));
       },
       providesTags: (result) =>
@@ -139,7 +147,6 @@ fetchProductById: builder.query({
           : ["ProductList"],
     }),
 
-    // جلب المنتجات الأكثر مبيعاً
     fetchBestSellingProducts: builder.query({
       query: (limit = 4) => `/best-selling?limit=${limit}`,
       providesTags: ["ProductList"],
