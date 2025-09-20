@@ -65,11 +65,11 @@ const Footer = () => {
           {/* Baby Haven */}
           <div>
             <h4 className="text-xl font-bold mb-3">Baby Haven</h4>
-            <p className="text-sm leading-7">
+{/*             <p className="text-sm leading-7">
               نهتم بجمع التراث والأصالة في باقات عطرية فريدة. منذ تأسيسنا ونحن
               نسعى لإبداع عطور تُحاكي قصصًا، تعبر عن هويتك وتخلّد ذكرياتك، كما
               نقدم لك تجربة تحمل بين طياتها رائحة التاريخ وعبق المستقبل.
-            </p>
+            </p> */}
           </div>
 
           {/* روابط مهمة */}
