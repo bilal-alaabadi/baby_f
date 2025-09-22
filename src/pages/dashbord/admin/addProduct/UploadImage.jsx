@@ -2,121 +2,120 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { getBaseUrl } from '../../../../utils/baseURL';
 
-const UploadImage = ({ name, setImage }) => {
-    const [loading, setLoading] = useState(false);
-    const [uploadedUrls, setUploadedUrls] = useState([]);
-    const [primaryImageIndex, setPrimaryImageIndex] = useState(0); // حالة لتتبع الصورة الرئيسية
+/**
+ * خاص بصفحة الإضافة:
+ * - كل اختيار جديد للصور يُرفع فورًا إلى /api/products/uploadImages ويُضاف فوق السابق (لا يستبدله).
+ * - تستطيع حذف أي صورة قبل إرسال المنتج.
+ *
+ * Props:
+ * - name, id
+ * - uploaded: string[]   قائمة الروابط الحالية (من الأب) لعرضها
+ * - setImage: (urls: string[]) => void  لتحديث القائمة في الأب
+ */
+const UploadImage = ({ name, id, uploaded = [], setImage }) => {
+  const [loading, setLoading] = useState(false);
 
-    // دالة لتحويل الملف إلى base64
-    const convertBase64 = (file) => {
-        return new Promise((resolve, reject) => {
-            const fileReader = new FileReader();
-            fileReader.readAsDataURL(file);
+  // تحويل ملف إلى Base64 (Data URL)
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.readAsDataURL(file);
+      r.onload = () => resolve(r.result);
+      r.onerror = (err) => reject(err);
+    });
 
-            fileReader.onload = () => {
-                resolve(fileReader.result);
-            };
+  // عند اختيار ملفات: نرفعها ونضيف الروابط فوق الحالية
+  const handleAddFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
-            fileReader.onerror = (error) => {
-                reject(error);
-            };
-        });
-    };
+    setLoading(true);
+    try {
+      const base64Images = await Promise.all(files.map(fileToBase64));
 
-    // دالة لتحميل الصور
-    const uploadImages = async (event) => {
-        const files = event.target.files;
-        if (files.length === 0) return;
-
-        setLoading(true);
-
-        try {
-            // تحويل الملفات إلى base64
-            const base64Images = await Promise.all(
-                Array.from(files).map((file) => convertBase64(file))
-            );
-
-            // إرسال الصور إلى الخادم
-            const response = await axios.post(`${getBaseUrl()}/uploadImages`, { images: base64Images });
-            const uploadedUrls = response.data;
-
-            setUploadedUrls(uploadedUrls);
-            setImage(uploadedUrls);
-            setPrimaryImageIndex(0); // تعيين أول صورة كصورة رئيسية افتراضياً
-            alert("تم تحميل الصور بنجاح!");
-        } catch (error) {
-            console.error("Error uploading images:", error);
-            alert("حدث خطأ أثناء تحميل الصور!");
-        } finally {
-            setLoading(false);
+      const resp = await axios.post(
+        // غيّر للمسار الصحيح عندك لو مختلف (مثلاً: `${getBaseUrl()}/uploadImages`)
+        `${getBaseUrl()}/api/products/uploadImages`,
+        { images: base64Images },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          maxBodyLength: Infinity, // مفيد للصور الكبيرة
         }
-    };
+      );
 
-    // دالة لتغيير الصورة الرئيسية
-    const setAsPrimary = (index) => {
-        setPrimaryImageIndex(index);
-        
-        // إعادة ترتيب الصور بحيث تكون الصورة المختارة أولاً
-        const reorderedUrls = [
-            uploadedUrls[index],
-            ...uploadedUrls.slice(0, index),
-            ...uploadedUrls.slice(index + 1)
-        ];
-        
-        setUploadedUrls(reorderedUrls);
-        setImage(reorderedUrls); // إرسال الترتيب الجديد إلى الدالة الأب
-    };
+      const urls = Array.isArray(resp.data) ? resp.data : [];
 
-    return (
-        <div>
-            <label htmlFor={name}>تحميل الصور</label>
-            <input
-                type="file"
-                name={name}
-                id={name}
-                onChange={uploadImages}
-                className="add-product-InputCSS"
-                multiple
-            />
-            {loading && (
-                <div className="mt-2 text-sm text-blue-600">جاري تحميل الصور...</div>
-            )}
-            {uploadedUrls.length > 0 && (
-                <div className="mt-4">
-                    <p className="text-sm text-green-600">
-                        الصورة الرئيسية: <span className="font-bold">الصورة {primaryImageIndex + 1}</span>
-                    </p>
-                    <div className="flex flex-wrap gap-4 mt-2">
-                        {uploadedUrls.map((url, index) => (
-                            <div key={index} className="relative group">
-                                <img
-                                    src={url}
-                                    alt={`uploaded-image-${index}`}
-                                    className={`w-24 h-24 object-cover rounded border-2 ${
-                                        index === primaryImageIndex 
-                                            ? 'border-blue-500' 
-                                            : 'border-transparent'
-                                    }`}
-                                    onError={(e) => {
-                                        e.target.src = "https://via.placeholder.com/100";
-                                        e.target.alt = "Image not found";
-                                    }}
-                                />
-                                {index !== primaryImageIndex && (
-                                    <button
-                                        onClick={() => setAsPrimary(index)}
-                                        className="absolute inset-0 bg-black bg-opacity-50 text-white text-xs font-bold hidden group-hover:flex items-center justify-center rounded"
-                                    >
-                                        تعيين كرئيسية
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+      // دمج الروابط الجديدة مع القديمة بدون تكرار وبلا useEffect (تجنّب لوب التحديث)
+      setImage((prev) => {
+        const merged = [...prev, ...urls];
+        return Array.from(new Set(merged));
+      });
+
+      // للسماح بإعادة اختيار نفس الملف مرة ثانية لو حبيت
+      e.target.value = '';
+    } catch (err) {
+      console.error('Error uploading images:', err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'حدث خطأ أثناء تحميل الصور!';
+      alert(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // حذف صورة قبل الإرسال النهائي
+  const removeImage = (idx) => {
+    setImage((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div className="text-right">
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+        الصور
+      </label>
+
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        name={name}
+        id={id}
+        onChange={handleAddFiles}
+        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-gray-100 hover:file:bg-gray-200"
+      />
+
+      {loading && <div className="mt-2 text-sm text-blue-600">جاري تحميل الصور...</div>}
+
+      {uploaded.length > 0 && (
+        <div className="mt-3">
+          <p className="text-sm text-gray-600 mb-1">الصور المختارة (تستطيع حذف أي صورة قبل إضافة المنتج):</p>
+          <div className="flex flex-wrap gap-3">
+            {uploaded.map((url, idx) => (
+              <div key={`upl-${idx}`} className="relative">
+                <img
+                  src={url}
+                  alt={`uploaded-${idx}`}
+                  className="w-24 h-24 object-cover rounded border"
+                  onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/100')}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-red-600 text-white text-sm font-bold flex items-center justify-center shadow"
+                  aria-label="حذف الصورة"
+                  title="حذف الصورة"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default UploadImage;

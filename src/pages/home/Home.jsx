@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Banner from './Banner';
 import TrendingProducts from '../shop/TrendingProducts';
 import log from "../../assets/logo.png"; // شعار الأنثور
+import HeroSection from './HeroSection';
 
 const Home = () => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -56,6 +57,7 @@ const Home = () => {
 
       {/* محتوى الصفحة */}
       <Banner />
+        <HeroSection />
       <TrendingProducts onProductsLoaded={() => setIsLoadingProducts(false)} />
     </>
   );

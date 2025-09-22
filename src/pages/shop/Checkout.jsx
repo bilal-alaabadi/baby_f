@@ -46,14 +46,16 @@ const Checkout = () => {
       return;
     }
 
-    // لا نرسل رسوم الشحن؛ السيرفر يحسبها حسب القاعدة
+    // نُضمّن اللون/المقاس المختارَين مع كل عنصر
     const body = {
       products: products.map(product => ({
         _id: product._id,
         name: product.name,
-        price: product.price,
+        price: product.price, // بالـ OMR كما في السلة
         quantity: product.quantity,
-        image: Array.isArray(product.image) ? product.image[0] : product.image
+        image: Array.isArray(product.image) ? product.image[0] : product.image,
+        chosenColor: product.chosenColor || product.color || undefined,
+        chosenSize: product.chosenSize || product.size || undefined,
       })),
       customerName,
       customerPhone,
@@ -179,24 +181,38 @@ const Checkout = () => {
       <div className="w-full md:w-1/3 p-4 md:p-6 bg-white rounded-lg shadow-lg border border-gray-200">
         <h2 className="text-lg md:text-xl font-bold mb-4 text-gray-800">طلبك</h2>
         <div className="space-y-4">
-          {products.map((product) => (
-            <div key={product._id} className="flex justify-between items-center py-2 border-b border-gray-100">
-              <span className="text-gray-700">{product.name} × {product.quantity}</span>
-              <span className="text-gray-900 font-medium">
-                {(product.price * product.quantity * exchangeRate).toFixed(2)} {currency}
-              </span>
-            </div>
-          ))}
+          {products.map((product) => {
+            const chosenColor = product.chosenColor || product.color || '';
+            const chosenSize  = product.chosenSize || product.size  || '';
+            return (
+              <div key={product._id + (chosenColor || '') + (chosenSize || '')} className="flex justify-between items-start py-2 border-b border-gray-100">
+                <div className="flex-1">
+                  <span className="text-gray-700">
+                    {product.name} × {product.quantity}
+                  </span>
+                  {(chosenColor || chosenSize) && (
+                    <div className="mt-1 text-xs text-gray-600 flex flex-wrap gap-2">
+                      {chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {chosenColor}</span>}
+                      {chosenSize &&  <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {chosenSize}</span>}
+                    </div>
+                  )}
+                </div>
+                <span className="text-gray-900 font-medium">
+                  {(product.price * product.quantity * exchangeRate).toFixed(2)} {currency}
+                </span>
+              </div>
+            );
+          })}
 
           <div className="flex justify-between items-center pt-2 border-t border-gray-200">
             <span className="text-gray-800">رسوم الشحن</span>
-            <p className="text-gray-900">{currency}{shippingFeeDisplay}</p>
+            <p className="text-gray-900">{shippingFeeDisplay} {currency}</p>
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t border-gray-200">
             <span className="text-gray-800 font-semibold">الإجمالي</span>
             <p className="text-gray-900 font-bold">
-              {currency}{grandTotalDisplay}
+              {grandTotalDisplay} {currency}
             </p>
           </div>
         </div>

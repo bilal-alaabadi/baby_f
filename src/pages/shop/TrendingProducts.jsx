@@ -67,8 +67,8 @@ const TrendingProducts = ({ onProductsLoaded }) => {
     <section className="section__container product__container">
       <div className="relative text-center" dir="rtl">
         {/* العنوانين */}
-        <h2 className="text-[32px] font-normal text-[#92B0B0] mb-1">أستكشف مجموعاتنا المميزة</h2>
-        <p className="text-[32px] font-bold text-[#F79B6A] mb-4">عبر أقسامنا الفريدة</p>
+        <h2 className="text-[32px] font-normal text-[#92B0B0] mb-1">المنتجات الجديدة</h2>
+        {/* <p className="text-[32px] font-bold text-[#F79B6A] mb-4">عبر أقسامنا الفريدة</p> */}
 
         {/* الشعار مع الخطين */}
         <div className="flex items-center justify-center gap-3 relative z-10">
@@ -152,7 +152,7 @@ const TrendingProducts = ({ onProductsLoaded }) => {
       {visibleProducts < products.length && (
         <div className="product__btn text-center mt-8" dir="rtl">
           <button
-            className="hover:bg-[#c19e22] bg-[#4E5A3F] text-white px-6 py-2 rounded-md transition-colors"
+            className=" bg-[#92B0B0] text-white px-6 py-2 rounded-md transition-colors"
             onClick={loadMoreProducts}
           >
             عرض المزيد

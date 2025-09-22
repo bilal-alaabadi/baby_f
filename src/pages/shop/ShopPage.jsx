@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ProductCards from './ProductCards';
 import ShopFiltering from './ShopFiltering';
 import { useFetchAllProductsQuery } from '../../redux/features/products/productsApi';
-import timings from "../../assets/baby haven (1).png";
+import timings from "../../assets/��بنر قسم الألعاب 3�.png";
 const ShopPage = () => {
   const [filtersState, setFiltersState] = useState({
     mainCategory: '',
@@ -45,11 +45,11 @@ const ShopPage = () => {
 
   return (
     <>
-      <section className='relative w-full overflow-hidden bg-[#e2e5e5]' style={{ aspectRatio: '16/9' }}>
+      <section className='relative w-100 overflow-hidden bg-[#e2e5e5]' >
         <img
           src={timings}
           alt="متجر حناء برغند"
-          className="w-full h-full object-cover object-center"
+          className="w-100 h-100 object-cover object-center"
         />
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white text-center px-4"></h1>

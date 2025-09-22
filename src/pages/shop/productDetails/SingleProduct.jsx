@@ -1,3 +1,4 @@
+// ========================= src/components/products/SingleProduct.jsx =========================
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -9,8 +10,7 @@ const SingleProduct = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
 
-  // 👇 أجبر إعادة الجلب لتفادي بيانات قديمة من الكاش
-  const { data, error, isLoading, refetch } = useFetchProductByIdQuery(id, {
+  const { data, error, isLoading } = useFetchProductByIdQuery(id, {
     refetchOnMountOrArgChange: true,
     refetchOnFocus: true,
     refetchOnReconnect: true,
@@ -18,7 +18,6 @@ const SingleProduct = () => {
 
   const { country } = useSelector((state) => state.cart);
 
-  // قد يكون المنتج داخل data مباشرة أو داخل data.product حسب الـAPI
   const singleProduct = data?.product ?? data ?? null;
   const productReviews = (singleProduct?.reviews) || [];
 
@@ -26,7 +25,13 @@ const SingleProduct = () => {
   const [imageScale, setImageScale] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  // العملة وسعر الصرف
+  // خيارات المنتج
+  const colors = Array.isArray(singleProduct?.colors) ? singleProduct.colors : [];
+  const hasColors = colors.length > 0;
+  const productSize = singleProduct?.size || '';   // مقاس (اختياري)
+  const productCount = singleProduct?.count || ''; // العدد (اختياري)
+  const [selectedColor, setSelectedColor] = useState('');
+
   const currency = country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = country === 'الإمارات' ? 9.5 : 1;
 
@@ -36,11 +41,27 @@ const SingleProduct = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (hasColors && colors.length === 1) {
+      setSelectedColor(colors[0]);
+    } else {
+      setSelectedColor('');
+    }
+  }, [id, hasColors]);
+
   const handleAddToCart = (product) => {
+    if (hasColors && !selectedColor) {
+      alert('الرجاء اختيار اللون قبل الإضافة إلى السلة');
+      return;
+    }
+
     setIsAddingToCart(true);
     const productToAdd = {
       ...product,
-      price: product.regularPrice || product.price || 0
+      price: product.regularPrice || product.price || 0,
+      chosenColor: selectedColor || undefined,
+      chosenSize: productSize || undefined,    // مقاس إن وجد
+      chosenCount: productCount || undefined,  // العدد إن وجد
     };
     dispatch(addToCart(productToAdd));
     setTimeout(() => setIsAddingToCart(false), 1000);
@@ -62,12 +83,10 @@ const SingleProduct = () => {
   if (error) return <p>حدث خطأ أثناء تحميل تفاصيل المنتج.</p>;
   if (!singleProduct) return null;
 
-  // 👇 قراءة stock بشكل آمن من أكثر من مسار + تحويله لرقم
   const rawStock = singleProduct?.stock ?? data?.stock ?? data?.product?.stock ?? 0;
-  const stock = Math.max(0, Number(rawStock)); // يحوّل "5" إلى 5، ويقص السالب إلى 0
+  const stock = Math.max(0, Number(rawStock));
   const isOutOfStock = stock === 0;
 
-  // الأسعار
   const unitBase = singleProduct.regularPrice || singleProduct.price || 0;
   const price = unitBase * exchangeRate;
   const oldPrice = singleProduct.oldPrice ? singleProduct.oldPrice * exchangeRate : null;
@@ -77,14 +96,7 @@ const SingleProduct = () => {
   return (
     <>
       <section className=' bg-[#e2e5e5]'>
-        {/* <h2 className='section__header capitalize'>صفحة المنتج الفردي</h2>
-        <div className='section__subheader space-x-2'>
-          <span className='hover:text-[#4E5A3F]'><Link to="/">الرئيسية</Link></span>
-          <i className="ri-arrow-right-s-line"></i>
-          <span className='hover:text-[#4E5A3F]'><Link to="/shop">المتجر</Link></span>
-          <i className="ri-arrow-right-s-line"></i>
-          <span className='hover:text-[#4E5A3F]'>{singleProduct.name}</span>
-        </div> */}
+        {/* مسار تنقّل إن رغبت */}
       </section>
 
       <section className='section__container mt-8' dir='rtl'>
@@ -136,12 +148,12 @@ const SingleProduct = () => {
           <div className='md:w-1/2 w-full'>
             <h3 className='text-2xl font-semibold mb-4'>{singleProduct.name}</h3>
 
-            {/* ✨ عرض المخزون */}
+            {/* عرض المخزون */}
             <p className={`mb-2 text-sm ${isOutOfStock ? 'text-red-600' : 'text-gray-600'}`}>
               المتوفر بالمخزون: {stock}{isOutOfStock && ' — غير متوفر حالياً'}
             </p>
 
-            {/* Price */}
+            {/* السعر */}
             <div className='text-xl text-[#3D4B2E] mb-4 space-x-1'>
               {price.toFixed(2)} {currency}
               {showDiscount && (
@@ -149,38 +161,84 @@ const SingleProduct = () => {
               )}
             </div>
 
-            {/* Product Info */}
-            <div className='flex flex-col space-y-2'>
-              <p className="text-gray-500 mb-4 text-lg font-medium leading-relaxed">
-                <span className="text-gray-800 font-bold block">الفئة:</span> 
+            {/* تفاصيل المنتج */}
+            <div className='flex flex-col gap-3'>
+              {/* الفئة/النوع */}
+              <div className="text-gray-700">
+                <span className="font-semibold">الفئة:</span>{' '}
                 <span className="text-gray-600">{singleProduct.category}</span>
-              </p>
+              </div>
+
+              {/* المقاس (اختياري) */}
+              {productSize && (
+                <div className="text-gray-700">
+                  <span className="font-semibold">المقاس:</span>{' '}
+                  <span className="text-gray-600">{productSize}</span>
+                </div>
+              )}
+
+              {/* العدد (اختياري) */}
+              {productCount && (
+                <div className="text-gray-700">
+                  <span className="font-semibold">العدد:</span>{' '}
+                  <span className="text-gray-600">{productCount}</span>
+                </div>
+              )}
+
+              {/* الألوان (اختياري) */}
+              {colors.length > 0 && (
+                <div className="text-gray-700">
+                  <div className="font-semibold mb-2">اختر اللون:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {colors.map((c, idx) => {
+                      const active = (selectedColor || '').toLowerCase() === String(c).toLowerCase();
+                      return (
+                        <button
+                          key={`${c}-${idx}`}
+                          type="button"
+                          onClick={() => setSelectedColor(c)}
+                          className={`px-3 py-1 rounded-full border text-sm transition
+                            ${active ? 'bg-[#92B0B0] text-white border-[#92B0B0]' : 'bg-white hover:bg-gray-50'}
+                          `}
+                          aria-pressed={active}
+                          aria-label={`اختر اللون ${c}`}
+                          title={c}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {!selectedColor && (
+                    <p className="text-xs text-gray-500 mt-1">يرجى اختيار لون قبل الإضافة للسلة.</p>
+                  )}
+                </div>
+              )}
             </div>
-            <p className="text-gray-500 mb-4 text-lg font-medium leading-relaxed">
-              <span className="text-gray-800 font-bold block">الوصف:</span> 
-              <span className="text-gray-600">{singleProduct.description}</span>
+
+            {/* الوصف */}
+            <p className="text-gray-600 mt-4 leading-relaxed">
+              {singleProduct.description}
             </p>
 
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 if (!isOutOfStock) {
-                  setIsAddingToCart(true);
-                  const productToAdd = {
-                    ...singleProduct,
-                    price: singleProduct.regularPrice || singleProduct.price || 0
-                  };
-                  dispatch(addToCart(productToAdd));
-                  setTimeout(() => setIsAddingToCart(false), 1000);
+                  handleAddToCart(singleProduct);
                 }
               }}
-              disabled={isOutOfStock}
+              disabled={isOutOfStock || (colors.length > 0 && !selectedColor)}
               className={`mt-6 px-6 py-3 text-white rounded-md transition-all duration-200 relative overflow-hidden
-                ${isOutOfStock ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#92B0B0] '}
-                ${isAddingToCart ? 'bg-green-600' : ''}
-              `}
+                ${isOutOfStock || (colors.length > 0 && !selectedColor)
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-[#92B0B0] hover:brightness-95'}`}
             >
-              {isOutOfStock ? 'غير متوفر' : isAddingToCart ? 'تمت الإضافة!' : 'إضافة إلى السلة'}
+              {isOutOfStock
+                ? 'غير متوفر'
+                : (colors.length > 0 && !selectedColor)
+                  ? 'اختر اللون أولاً'
+                  : 'إضافة إلى السلة'}
             </button>
           </div>
         </div>

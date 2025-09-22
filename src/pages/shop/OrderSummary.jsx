@@ -1,4 +1,3 @@
-// components/OrderSummary.jsx
 import React, { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCart, updateQuantity, removeFromCart } from '../../redux/features/cart/cartSlice';
@@ -18,12 +17,11 @@ const OrderSummary = ({ onClose }) => {
   // قاعدة الشحن التدرّجية
   const shippingFeeOMR = subtotalOMR < 10 ? 2 : (subtotalOMR <= 20 ? 1 : 0);
 
-  // العرض بالعملة المحلية
+  // للعرض
   const formattedSubtotal = (subtotalOMR * exchangeRate).toFixed(2);
   const formattedShipping = (shippingFeeOMR * exchangeRate).toFixed(2);
   const formattedGrand = ((subtotalOMR + shippingFeeOMR) * exchangeRate).toFixed(2);
 
-  // حساب التحفيز للشحن
   const incentives = useMemo(() => {
     const toCheaper = subtotalOMR < 10 ? (10 - subtotalOMR) : 0;
     const toFree = subtotalOMR < 20 ? (20 - subtotalOMR) : 0;
@@ -33,7 +31,6 @@ const OrderSummary = ({ onClose }) => {
       toFree,
       toCheaperDisplay: (toCheaper * exchangeRate).toFixed(2),
       toFreeDisplay: (toFree * exchangeRate).toFixed(2),
-      // تقدّم نحو الشحن المجاني
       progressToFree: Math.max(0, Math.min(100, Math.round((subtotalOMR / 20) * 100))),
     };
   }, [subtotalOMR, exchangeRate]);
@@ -42,9 +39,9 @@ const OrderSummary = ({ onClose }) => {
     dispatch(clearCart());
   };
 
-  const dec = (id) => dispatch(updateQuantity({ id, type: 'decrement' }));
-  const inc = (id) => dispatch(updateQuantity({ id, type: 'increment' }));
-  const remove = (id) => dispatch(removeFromCart({ id }));
+  const dec = (id, chosenColor, chosenSize) => dispatch(updateQuantity({ id, type: 'decrement', chosenColor, chosenSize }));
+  const inc = (id, chosenColor, chosenSize) => dispatch(updateQuantity({ id, type: 'increment', chosenColor, chosenSize }));
+  const remove = (id, chosenColor, chosenSize) => dispatch(removeFromCart({ id, chosenColor, chosenSize }));
 
   return (
     <div className="bg-white mt-5 rounded-lg shadow-md border border-gray-200">
@@ -75,10 +72,7 @@ const OrderSummary = ({ onClose }) => {
 
               <div className="mt-3">
                 <div className="w-full bg-white/70 rounded-full h-2 overflow-hidden border border-emerald-300">
-                  <div
-                    className="h-2 bg-emerald-500"
-                    style={{ width: `${incentives.progressToFree}%` }}
-                  />
+                  <div className="h-2 bg-emerald-500" style={{ width: `${incentives.progressToFree}%` }} />
                 </div>
                 <div className="flex justify-between text-[12px] text-emerald-800 mt-1">
                   <span>0</span>
@@ -97,30 +91,28 @@ const OrderSummary = ({ onClose }) => {
         {/* عناصر السلة */}
         <div className="space-y-4">
           {products.map((item) => {
-            const stock = Number(item.stock ?? 0); // يجب تمرير stock مع المنتج
+            const stock = Number(item.stock ?? 0);
             const atMax = stock > 0 && item.quantity >= stock;
             const outOfStock = stock === 0;
+            const imgSrc = Array.isArray(item.image) ? item.image[0] : item.image;
+
+            const chosenColor = item.chosenColor || item.color || '';
+            const chosenSize  = item.chosenSize  || item.size  || '';
 
             return (
-              <div
-                key={item._id}
-                className="border rounded-lg p-3 md:p-4 shadow-sm bg-white"
-              >
+              <div key={item._id + (chosenColor || '') + (chosenSize || '')} className="border rounded-lg p-3 md:p-4 shadow-sm bg-white">
                 <div className="flex items-start gap-3">
-                  {/* صورة المنتج (إن وُجدت) */}
                   <img
-                    src={Array.isArray(item.image) ? item.image[0] : item.image}
+                    src={imgSrc}
                     alt={item.name}
                     className="w-16 h-16 object-cover rounded-md border"
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/64';
-                    }}
+                    onError={(e) => { e.target.src = 'https://via.placeholder.com/64'; }}
                   />
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-semibold text-gray-800">{item.name}</h3>
                       <button
-                        onClick={() => remove(item._id)}
+                        onClick={() => remove(item._id, chosenColor, chosenSize)}
                         className="text-red-500 hover:text-red-600 text-sm"
                         title="حذف المنتج"
                       >
@@ -128,10 +120,18 @@ const OrderSummary = ({ onClose }) => {
                       </button>
                     </div>
 
-                    {/* تحكم الكمية مع الربط بالمخزون */}
+                    {/* تفاصيل اللون/المقاس */}
+                    {(chosenColor || chosenSize) && (
+                      <div className="mt-1 text-xs text-gray-600 flex flex-wrap gap-2">
+                        {chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {chosenColor}</span>}
+                        {chosenSize &&  <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {chosenSize}</span>}
+                      </div>
+                    )}
+
+                    {/* تحكم الكمية */}
                     <div className="mt-2 flex items-center gap-2">
                       <button
-                        onClick={() => dec(item._id)}
+                        onClick={() => dec(item._id, chosenColor, chosenSize)}
                         className="w-8 h-8 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
                         disabled={item.quantity <= 1}
                         title="تقليل الكمية"
@@ -142,7 +142,7 @@ const OrderSummary = ({ onClose }) => {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => inc(item._id)}
+                        onClick={() => inc(item._id, chosenColor, chosenSize)}
                         className={`w-8 h-8 rounded-md border ${
                           atMax || outOfStock
                             ? 'border-gray-200 text-gray-300 cursor-not-allowed'
@@ -154,7 +154,6 @@ const OrderSummary = ({ onClose }) => {
                         +
                       </button>
 
-                      {/* شارة المخزون */}
                       <div className="ms-2">
                         {outOfStock ? (
                           <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">
@@ -172,7 +171,7 @@ const OrderSummary = ({ onClose }) => {
                       </div>
                     </div>
 
-                    {/* السعر الإجمالي للعنصر */}
+                    {/* السعر الإجمالي لهذا العنصر */}
                     <div className="mt-2 text-sm text-gray-700">
                       السعر: {(item.price * exchangeRate * item.quantity).toFixed(2)} {currency}
                     </div>
@@ -213,9 +212,7 @@ const OrderSummary = ({ onClose }) => {
           </button>
 
           <Link to="/checkout" onClick={onClose}>
-            <button
-              className="w-full bg-emerald-600 px-3 py-2 text-white mt-3 rounded-md flex justify-center items-center gap-2 hover:bg-emerald-700 transition-colors"
-            >
+            <button className="w-full bg-emerald-600 px-3 py-2 text-white mt-3 rounded-md flex justify-center items-center gap-2 hover:bg-emerald-700 transition-colors">
               <i className="ri-bank-card-line" />
               <span>إتمام الشراء</span>
             </button>

@@ -1,3 +1,4 @@
+// ========================= src/redux/features/products/productsApi.js =========================
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { getBaseUrl } from "../../../utils/baseURL";
 
@@ -49,7 +50,7 @@ const productsApi = createApi({
           : ["ProductList"],
     }),
 
-    // ✅ إصلاح: إرجاع stock + reviews + باقي الحقول
+    // إرجاع جميع الحقول المهمة بما فيها size و count و colors
     fetchProductById: builder.query({
       query: (id) => `/product/${id}`,
       transformResponse: (response) => {
@@ -63,18 +64,23 @@ const productsApi = createApi({
           mainCategory: product.mainCategory,
           category: product.category,
           size: product.size || "",
+          count: product.count || "",
           price: product.price,
           oldPrice: product.oldPrice ?? "",
           description: product.description,
           image: Array.isArray(product.image) ? product.image : [product.image],
           author: product.author,
-          // 👇 مهم:
-          stock: typeof product.stock === "string" ? Number(product.stock) : (product.stock ?? 0),
+          stock:
+            typeof product.stock === "string"
+              ? Number(product.stock)
+              : product.stock ?? 0,
           rating: product.rating ?? 0,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
-          // المراجعات كما أرسلها السيرفر
-          reviews: Array.isArray(response.reviews) ? response.reviews : [],
+          colors: Array.isArray(product.colors) ? product.colors : [],
+          reviews: Array.isArray(response.reviews)
+            ? response.reviews
+            : product.reviews ?? [],
         };
       },
       providesTags: (result, error, id) => [{ type: "Product", id }],
@@ -122,22 +128,20 @@ const productsApi = createApi({
     }),
 
     searchProducts: builder.query({
-      query: (searchTerm) => `/search?q=${searchTerm}`,
-      transformResponse: (response) => {
-        return response.map((product) => ({
+      query: (searchTerm) => `/search?q=${encodeURIComponent(searchTerm)}`,
+      transformResponse: (response) =>
+        response.map((product) => ({
           ...product,
           price:
             product.category === "حناء بودر"
               ? product.price
               : product.regularPrice,
           images: Array.isArray(product.image) ? product.image : [product.image],
-          // اختياري: تمرير المخزون لو محتاجه في نتائج البحث
           stock:
             typeof product.stock === "string"
               ? Number(product.stock)
               : (product.stock ?? 0),
-        }));
-      },
+        })),
       providesTags: (result) =>
         result
           ? [

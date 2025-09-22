@@ -1,3 +1,4 @@
+// ========================= src/components/admin/addProduct/AddProduct.jsx =========================
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import TextInput from './TextInput';
@@ -38,14 +39,19 @@ const AddProduct = () => {
     price: '',
     oldPrice: '',
     description: '',
-    stock: 1, // 👈 الكمية الافتراضية
+    stock: 1,   // الكمية الافتراضية
+    size: '',   // مقاس (اختياري)
+    count: '',  // العدد (اختياري)
   });
 
-  const [image, setImage] = useState([]); // UploadImage يملأها
+  // الألوان (اختياري الآن)
+  const [colors, setColors] = useState([]);
+  const [colorInput, setColorInput] = useState('');
+
+  const [image, setImage] = useState([]);
   const [addProduct, { isLoading, error }] = useAddProductMutation();
   const navigate = useNavigate();
 
-  // إعادة ضبط النوع عند تغيير الفئة الرئيسية
   useEffect(() => {
     setProduct((prev) => ({ ...prev, category: '' }));
   }, [product.mainCategory]);
@@ -55,15 +61,32 @@ const AddProduct = () => {
     setProduct((prev) => ({ ...prev, [name]: value }));
   };
 
-  // تحكم آمن بالكمية
   const setSafeStock = (val) => {
     const n = Number.isNaN(Number(val)) ? 0 : Math.floor(Number(val));
     const clamped = Math.max(0, n);
     setProduct((prev) => ({ ...prev, stock: clamped }));
   };
-
   const incStock = () => setSafeStock((product.stock || 0) + 1);
   const decStock = () => setSafeStock((product.stock || 0) - 1);
+
+  const addColor = () => {
+    const c = (colorInput || '').trim();
+    if (!c) return;
+    const exists = colors.some(x => x.toLowerCase() === c.toLowerCase());
+    if (exists) {
+      setColorInput('');
+      return;
+    }
+    setColors(prev => [...prev, c]);
+    setColorInput('');
+  };
+  const removeColor = (idx) => setColors(prev => prev.filter((_, i) => i !== idx));
+  const handleKeyDownOnColor = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addColor();
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,7 +98,6 @@ const AddProduct = () => {
       'السعر': product.price,
       'الوصف': product.description,
       'الصور': image.length > 0,
-      // نشترط >= 1 حتى يكون هناك مخزون فعلي
       'الكمية (المخزون)': Number(product.stock) >= 1,
     };
 
@@ -94,6 +116,9 @@ const AddProduct = () => {
         price: Number(product.price),
         oldPrice: product.oldPrice ? Number(product.oldPrice) : undefined,
         stock: Number(product.stock),
+        size: product.size?.trim() ? product.size.trim() : undefined,   // اختياري
+        count: product.count?.trim() ? product.count.trim() : undefined, // اختياري
+        colors,  // اختياري (قد تكون فارغة)
         image,
         author: user?._id,
       }).unwrap();
@@ -107,7 +132,11 @@ const AddProduct = () => {
         oldPrice: '',
         description: '',
         stock: 1,
+        size: '',
+        count: '',
       });
+      setColors([]);
+      setColorInput('');
       setImage([]);
       navigate('/shop');
     } catch (err) {
@@ -127,7 +156,6 @@ const AddProduct = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-
         <TextInput
           label="أسم المنتج"
           name="name"
@@ -155,6 +183,73 @@ const AddProduct = () => {
               : [{ label: 'أختر النوع', value: '' }]
           }
         />
+
+        {/* المقاس (اختياري) */}
+        <TextInput
+          label="المقاس (اختياري)"
+          name="size"
+          type="text"
+          placeholder="مثال: XL أو 24cm"
+          value={product.size}
+          onChange={handleChange}
+        />
+
+        {/* العدد (اختياري) */}
+        <TextInput
+          label="العدد (اختياري)"
+          name="count"
+          type="text"
+          placeholder="مثال: 2 قطع / 12 عبوة"
+          value={product.count}
+          onChange={handleChange}
+        />
+
+        {/* الألوان (اختياري) */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            الألوان المتوفرة (اختياري — أضف لونًا واحدًا في كل مرة)
+          </label>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="add-product-InputCSS flex-1"
+              placeholder="اكتب اسم اللون ثم اضغط إضافة"
+              value={colorInput}
+              onChange={(e) => setColorInput(e.target.value)}
+              onKeyDown={handleKeyDownOnColor}
+            />
+            <button
+              type="button"
+              onClick={addColor}
+              className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-black"
+            >
+              إضافة لون
+            </button>
+          </div>
+
+          {colors.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {colors.map((c, i) => (
+                <span
+                  key={`${c}-${i}`}
+                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full border bg-gray-50 text-sm"
+                >
+                  {c}
+                  <button
+                    type="button"
+                    onClick={() => removeColor(i)}
+                    className="text-red-600 hover:text-red-700"
+                    aria-label={`حذف اللون ${c}`}
+                    title="حذف"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
         <TextInput
           label="السعر القديم (اختياري)"
@@ -213,7 +308,7 @@ const AddProduct = () => {
           <p className="text-xs text-gray-500 mt-1">الحد الأدنى 1 عند الإضافة.</p>
         </div>
 
-        <UploadImage name="image" id="image" setImage={setImage} />
+        <UploadImage name="image" id="image" uploaded={image} setImage={setImage} />
 
         <div>
           <label htmlFor="description" className="block text-sm font-medium text-gray-700">
