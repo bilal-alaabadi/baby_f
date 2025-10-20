@@ -1,4 +1,4 @@
-// ========================= src/redux/features/products/productsApi.js =========================
+// ========================= redux/features/products/productsApi.js =========================
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { getBaseUrl } from "../../../utils/baseURL";
 
@@ -11,10 +11,12 @@ const productsApi = createApi({
   tagTypes: ["Product", "ProductList"],
   endpoints: (builder) => ({
 
+    // جلب المنتجات مع دعم الفلاتر
     fetchAllProducts: builder.query({
       query: ({
+        mainCategory,
         category,
-        gender,
+        availability,        // '', 'in', 'out'
         minPrice,
         maxPrice,
         search,
@@ -23,23 +25,28 @@ const productsApi = createApi({
         limit = 10,
       }) => {
         const params = {
-          page: page.toString(),
-          limit: limit.toString(),
+          page: String(page),
+          limit: String(limit),
           sort,
         };
+
+        if (mainCategory && mainCategory !== "الكل") params.mainCategory = mainCategory;
         if (category && category !== "الكل") params.category = category;
-        if (gender) params.gender = gender;
-        if (minPrice) params.minPrice = minPrice;
-        if (maxPrice) params.maxPrice = maxPrice;
+        if (availability) params.availability = availability;
+
+        if (minPrice != null && minPrice !== "") params.minPrice = String(minPrice);
+        if (maxPrice != null && maxPrice !== "") params.maxPrice = String(maxPrice);
         if (search) params.search = search;
 
         const queryParams = new URLSearchParams(params).toString();
         return `/?${queryParams}`;
       },
+      // نعيد highestPrice للفلاتر
       transformResponse: (response) => ({
         products: response.products,
         totalPages: response.totalPages,
         totalProducts: response.totalProducts,
+        highestPrice: response.highestPrice ?? null,
       }),
       providesTags: (result) =>
         result
@@ -50,14 +57,51 @@ const productsApi = createApi({
           : ["ProductList"],
     }),
 
-    // إرجاع جميع الحقول المهمة بما فيها size و count و colors
+    // تفاصيل منتج (تُطبع countPrices وتحوَّل الألوان إلى أسماء فقط)
     fetchProductById: builder.query({
       query: (id) => `/product/${id}`,
       transformResponse: (response) => {
-        const product = response?.product;
-        if (!product) {
+        // ندعم شكلين:
+        // 1) { product: {...}, reviews? }
+        // 2) {...} مباشرة كمنتج
+        const product = response?.product ?? response;
+        if (!product || typeof product !== "object") {
           throw new Error("المنتج غير موجود");
         }
+
+        // صور
+        const images = Array.isArray(product.image)
+          ? product.image
+          : product.image
+          ? [product.image]
+          : [];
+
+        // countPrices: [{count, price, stock?}]
+        const normalizedCountPrices = Array.isArray(product.countPrices)
+          ? product.countPrices
+              .map((cp) => ({
+                count: String(cp?.count ?? "").trim(),
+                price: Number(cp?.price ?? NaN),
+                stock:
+                  cp?.stock === undefined || cp?.stock === null || cp?.stock === ""
+                    ? undefined
+                    : Number(cp.stock),
+              }))
+              .filter((x) => x.count && !Number.isNaN(x.price) && x.price >= 0)
+          : [];
+
+        // الألوان: نقبل ["أحمر", "أزرق"] أو [{name:"أحمر", image:"..."}, ...]
+        const rawColors = Array.isArray(product.colors) ? product.colors : [];
+        const colorNames = rawColors
+          .map((c) => (typeof c === "string" ? c : String(c?.name || "")))
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        // التقييمات
+        const reviews =
+          Array.isArray(response?.reviews) ? response.reviews :
+          Array.isArray(product?.reviews) ? product.reviews : [];
+
         return {
           _id: product._id,
           name: product.name,
@@ -65,10 +109,10 @@ const productsApi = createApi({
           category: product.category,
           size: product.size || "",
           count: product.count || "",
-          price: product.price,
+          price: product.price, // السعر الأساسي (أقل سعر إن وُجدت خيارات يعالجه الباك/عند العرض)
           oldPrice: product.oldPrice ?? "",
           description: product.description,
-          image: Array.isArray(product.image) ? product.image : [product.image],
+          image: images,
           author: product.author,
           stock:
             typeof product.stock === "string"
@@ -77,10 +121,9 @@ const productsApi = createApi({
           rating: product.rating ?? 0,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
-          colors: Array.isArray(product.colors) ? product.colors : [],
-          reviews: Array.isArray(response.reviews)
-            ? response.reviews
-            : product.reviews ?? [],
+          colors: colorNames,                 // أسماء فقط لتوافق الواجهة
+          reviews,
+          countPrices: normalizedCountPrices, // [{count, price, stock?}]
         };
       },
       providesTags: (result, error, id) => [{ type: "Product", id }],
@@ -132,15 +175,11 @@ const productsApi = createApi({
       transformResponse: (response) =>
         response.map((product) => ({
           ...product,
-          price:
-            product.category === "حناء بودر"
-              ? product.price
-              : product.regularPrice,
           images: Array.isArray(product.image) ? product.image : [product.image],
           stock:
             typeof product.stock === "string"
               ? Number(product.stock)
-              : (product.stock ?? 0),
+              : product.stock ?? 0,
         })),
       providesTags: (result) =>
         result

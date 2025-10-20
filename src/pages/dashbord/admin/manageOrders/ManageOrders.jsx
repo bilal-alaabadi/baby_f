@@ -56,14 +56,22 @@ const ManageOrders = () => {
         }
         
         const cleanedPhone = phone.replace(/\D/g, '');
-        const message = `مرحباً ${viewOrder.customerName || 'عميلنا العزيز'}،
+        const itemsLines = (viewOrder.products || []).map((p) => {
+            const color = p.chosenColor ? ` | اللون: ${p.chosenColor}` : '';
+            const size  = p.chosenSize  ? ` | المقاس: ${p.chosenSize}`   : '';
+            const count = p.chosenCount ? ` | العدد: ${p.chosenCount}`   : '';
+            const opts  = `${color}${size}${count}`;
+            return `- ${p.name}${opts} (${p.quantity}x ${(p.price || 0).toFixed(2)} ر.ع)`;
+        }).join('\n');
+
+        const message = `مرحباً ${viewOrder.customerName || 'عميلنا العزيز'},
         
 تفاصيل طلبك رقم: ${viewOrder.orderId}
 تاريخ الطلب: ${formatDate(viewOrder.createdAt)}
 المجموع النهائي: ${(viewOrder.amount || 0).toFixed(2)} ر.ع
 
 المنتجات:
-${viewOrder.products?.map(p => `- ${p.name} (${p.quantity}x ${(p.price || 0).toFixed(2)} ر.ع)`).join('\n')}
+${itemsLines}
 
 الرجاء تأكيد استلامك للطلب. شكراً لثقتكم بنا!`;
         
@@ -275,11 +283,13 @@ ${viewOrder.products?.map(p => `- ${p.name} (${p.quantity}x ${(p.price || 0).toF
                                                         <td className="py-2 px-3">
                                                             <div>
                                                                 <p className="font-medium text-sm">{product.name || 'منتج غير محدد'}</p>
-                                                                {product.selectedSize && (
-                                                                    <p className="text-xs text-gray-500">الحجم: {product.selectedSize}</p>
-                                                                )}
-                                                                {product.selectedColor && (
-                                                                    <p className="text-xs text-gray-500">اللون: {product.selectedColor}</p>
+                                                                {/* ✅ تفاصيل اللون/المقاس/العدد */}
+                                                                {(product.chosenSize || product.chosenColor || product.chosenCount) && (
+                                                                    <div className="mt-0.5 text-xs text-gray-600 flex flex-wrap gap-2">
+                                                                        {product.chosenSize  && <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {product.chosenSize}</span>}
+                                                                        {product.chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {product.chosenColor}</span>}
+                                                                        {product.chosenCount && <span className="px-2 py-0.5 rounded-full border bg-gray-50">العدد: {product.chosenCount}</span>}
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </td>
@@ -312,11 +322,13 @@ ${viewOrder.products?.map(p => `- ${p.name} (${p.quantity}x ${(p.price || 0).toF
                                                     </div>
                                                     <div className="flex-grow">
                                                         <p className="font-medium text-sm">{product.name || 'منتج غير محدد'}</p>
-                                                        {product.selectedSize && (
-                                                            <p className="text-xs text-gray-500">الحجم: {product.selectedSize}</p>
-                                                        )}
-                                                        {product.selectedColor && (
-                                                            <p className="text-xs text-gray-500">اللون: {product.selectedColor}</p>
+                                                        {/* ✅ تفاصيل اللون/المقاس/العدد للموبايل */}
+                                                        {(product.chosenSize || product.chosenColor || product.chosenCount) && (
+                                                            <div className="mt-0.5 text-xs text-gray-600 flex flex-wrap gap-2">
+                                                                {product.chosenSize  && <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {product.chosenSize}</span>}
+                                                                {product.chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {product.chosenColor}</span>}
+                                                                {product.chosenCount && <span className="px-2 py-0.5 rounded-full border bg-gray-50">العدد: {product.chosenCount}</span>}
+                                                            </div>
                                                         )}
                                                         <div className="flex justify-between mt-1">
                                                             <span className="text-xs">الكمية: {product.quantity || 0}</span>
@@ -382,7 +394,15 @@ ${viewOrder.products?.map(p => `- ${p.name} (${p.quantity}x ${(p.price || 0).toF
                                     </svg>
                                     تحميل PDF
                                 </button>
-                                
+                                {/* زر تواصل واتساب (اختياري) */}
+                                {viewOrder?.customerPhone && (
+                                  <button
+                                    className="bg-emerald-600 text-white px-3 py-1 md:px-4 md:py-2 rounded-md hover:bg-emerald-700 text-xs md:text-sm flex items-center gap-1"
+                                    onClick={() => handleContactWhatsApp(viewOrder.customerPhone)}
+                                  >
+                                    واتساب
+                                  </button>
+                                )}
                             </div>
                         </div>
                     </div>

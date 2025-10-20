@@ -1,3 +1,4 @@
+// ========================= src/components/products/UploadImage.jsx =========================
 import React, { useState } from 'react';
 import axios from 'axios';
 import { getBaseUrl } from '../../../../utils/baseURL';
@@ -70,6 +71,32 @@ const UploadImage = ({ name, id, uploaded = [], setImage }) => {
     setImage((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // ====== الإضافة الجديدة: تعديل "رقم الصورة" لإعادة ترتيبها ======
+
+  // نقل عنصر من فهرس لآخر داخل مصفوفة (آمن على الحدود)
+  const moveItem = (arr, fromIdx, toIdx) => {
+    const copy = [...arr];
+    const from = Math.max(0, Math.min(copy.length - 1, fromIdx));
+    const to = Math.max(0, Math.min(copy.length - 1, toIdx));
+    if (from === to) return copy;
+    const [moved] = copy.splice(from, 1);
+    copy.splice(to, 0, moved);
+    return copy;
+  };
+
+  // عند تعديل رقم الصورة (1-مبني للمستخدم)
+  const handleChangePosition = (currentIdx, newPosInput) => {
+    // حوّل المُدخل لعدد صحيح، واخضعه للحدود [1 .. uploaded.length]
+    const raw = Number(newPosInput);
+    if (!Number.isFinite(raw)) return;
+    const bounded = Math.max(1, Math.min(uploaded.length, Math.trunc(raw)));
+
+    // حوّل لِـ 0-index قبل التحريك
+    const targetIdx = bounded - 1;
+
+    setImage((prev) => moveItem(prev, currentIdx, targetIdx));
+  };
+
   return (
     <div className="text-right">
       <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
@@ -90,7 +117,10 @@ const UploadImage = ({ name, id, uploaded = [], setImage }) => {
 
       {uploaded.length > 0 && (
         <div className="mt-3">
-          <p className="text-sm text-gray-600 mb-1">الصور المختارة (تستطيع حذف أي صورة قبل إضافة المنتج):</p>
+          <p className="text-sm text-gray-600 mb-1">
+            الصور المختارة (تستطيع حذف أي صورة قبل إضافة المنتج) — ويمكنك تعديل <span className="font-semibold">رقم الصورة</span> لإعادة ترتيبها:
+          </p>
+
           <div className="flex flex-wrap gap-3">
             {uploaded.map((url, idx) => (
               <div key={`upl-${idx}`} className="relative">
@@ -100,6 +130,8 @@ const UploadImage = ({ name, id, uploaded = [], setImage }) => {
                   className="w-24 h-24 object-cover rounded border"
                   onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/100')}
                 />
+
+                {/* زر الحذف (موجود مسبقًا) */}
                 <button
                   type="button"
                   onClick={() => removeImage(idx)}
@@ -109,6 +141,25 @@ const UploadImage = ({ name, id, uploaded = [], setImage }) => {
                 >
                   ×
                 </button>
+
+                {/* ====== الجديد: مُدخل تعديل رقم الصورة ====== */}
+                <div className="mt-1 flex items-center justify-between">
+                  <label className="text-[11px] text-gray-600 ml-2" htmlFor={`pos-${idx}`}>
+                    رقم الصورة
+                  </label>
+                  <input
+                    id={`pos-${idx}`}
+                    type="number"
+                    min={1}
+                    max={uploaded.length}
+                    value={idx + 1}
+                    onChange={(e) => handleChangePosition(idx, e.target.value)}
+                    className="w-16 h-7 text-center text-xs border rounded-md border-gray-300 focus:outline-none"
+                    title="غيّر هذا الرقم لإعادة ترتيب الصورة"
+                    aria-label={`تعديل ترتيب الصورة رقم ${idx + 1}`}
+                  />
+                </div>
+                {/* ============================================ */}
               </div>
             ))}
           </div>

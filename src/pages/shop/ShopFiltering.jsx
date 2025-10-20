@@ -1,11 +1,14 @@
-import React, { useState, useMemo } from 'react';
+// ========================= src/pages/shop/ShopFiltering.jsx =========================
+import React, { useMemo } from 'react';
 
 const mainCategories = [
+  { label: 'الكل', value: '' },
   { label: 'الألعاب', value: 'الألعاب' },
   { label: 'مستلزمات المواليد', value: 'مستلزمات المواليد' },
 ];
 
 const subCategories = {
+  '': [{ label: 'الكل', value: '' }],
   'الألعاب': [
     { label: 'الكل', value: '' },
     { label: 'ألعاب تعليمية', value: 'ألعاب تعليمية' },
@@ -21,143 +24,179 @@ const subCategories = {
   ],
 };
 
-const ShopFiltering = ({ filtersState, setFiltersState, clearFilters }) => {
-  // فتح/إغلاق مجموعات الأكورديون على الهاتف
-  const [openSections, setOpenSections] = useState(() =>
-    Object.fromEntries(mainCategories.map(c => [c.value, true]))
-  );
+const sortOptions = [
+  { label: 'السعر: من الأعلى إلى الأدنى', value: 'price:desc' },
+  { label: 'السعر: من الأدنى إلى الأعلى', value: 'price:asc' },
+  { label: 'الأحدث ثم الأقدم', value: 'createdAt:desc' },
+  { label: 'الأقدم ثم الأحدث', value: 'createdAt:asc' },
+];
 
-  const toggleSection = (val) => {
-    setOpenSections(prev => ({ ...prev, [val]: !prev[val] }));
+const Chip = ({ active, children, onClick, ariaLabel }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={ariaLabel}
+    className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs border transition
+      ${active ? 'bg-[#92B0B0] text-white border-[#92B0B0]' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+  >
+    {children}
+  </button>
+);
+
+const Segmented = ({ value, onChange, options, name }) => (
+  <div className="inline-flex rounded-xl border border-gray-300 bg-white overflow-hidden">
+    {options.map((opt, idx) => {
+      const active = value === opt.value;
+      return (
+        <button
+          key={opt.value + idx}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`px-3 py-2 text-xs transition
+            ${active ? 'bg-[#92B0B0] text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}
+            ${idx !== options.length - 1 ? 'border-l border-gray-200' : ''}`}
+          aria-pressed={active}
+          aria-label={`${name}-${opt.label}`}
+        >
+          {opt.label}
+        </button>
+      );
+    })}
+  </div>
+);
+
+const ShopFiltering = ({ filtersState, setFiltersState, clearFilters, highestPrice }) => {
+  const { mainCategory, category, availability, minPrice, maxPrice, sort } = filtersState;
+
+  const currentSubs = useMemo(() => subCategories[mainCategory] || subCategories[''], [mainCategory]);
+
+  const onChange = (name, value) =>
+    setFiltersState(prev => ({ ...prev, [name]: value }));
+
+  const handlePickMain = (val) => {
+    setFiltersState(prev => ({ ...prev, mainCategory: val, category: '' }));
   };
 
-  const sectionIsActive = useMemo(() => {
-    // يحدد القسم المفعّل لتلوين البطاقة
-    const active = {};
-    mainCategories.forEach(({ value }) => {
-      active[value] =
-        filtersState.mainCategory === value; // مفعّل إذا الفئة الرئيسية من هذا القسم
-    });
-    return active;
-  }, [filtersState]);
-
-  const handlePick = (mainValue, subValue) => {
-    setFiltersState({ mainCategory: mainValue, category: subValue });
+  const handlePickSub = (val) => {
+    setFiltersState(prev => ({ ...prev, category: val }));
   };
 
   return (
-    <aside className="w-full md:w-72 md:max-w-72 flex-shrink-0" dir="rtl" aria-label="فلاتر المتجر">
-      {/* حاوية عامة جميلة */}
-      <div className="space-y-4 md:space-y-5">
-        {/* بطاقة عنوان الفلاتر */}
-        <div className="rounded-2xl bg-white/70 backdrop-blur shadow-sm border border-gray-200 p-4 md:p-5">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base md:text-lg font-semibold text-gray-800">الفلاتر</h3>
-            <button
-              onClick={clearFilters}
-              className="text-sm md:text-[13px] px-3 py-1.5 rounded-full bg-[#92B0B0] text-white hover:opacity-90 transition"
-            >
-              مسح الفلاتر
-            </button>
+    <nav dir="rtl" aria-label="شريط فلاتر كامل"
+      className="w-full rounded-2xl bg-white/70 backdrop-blur border border-gray-200 shadow-sm">
+      {/* شريط علوي: عنوان + مسح */}
+
+
+      {/* محتوى كامل بدون تمرير أفقي: التفاف لعدة أسطر */}
+      <div className="flex flex-wrap items-start gap-5 px-4 pb-4">
+
+        {/* التصنيفات الرئيسية */}
+        <div className="flex flex-col gap-2 grow basis-[260px]">
+          <span className="text-[11px] text-gray-600">التصنيف الرئيسي</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {mainCategories.map((mc) => (
+              <Chip
+                key={mc.value || 'all-main'}
+                active={mainCategory === mc.value}
+                onClick={() => handlePickMain(mc.value)}
+                ariaLabel={`main-${mc.label}`}
+              >
+                {mc.label}
+              </Chip>
+            ))}
           </div>
         </div>
 
-        {/* بطاقات المجموعات */}
-        <div className="space-y-3">
-          {mainCategories.map((main) => {
-            const isOpen = openSections[main.value];
-            const isActive = sectionIsActive[main.value];
-
-            return (
-              <section
-                key={main.value}
-                className={`rounded-2xl border transition shadow-sm ${
-                  isActive ? 'border-[#3D4B2E] bg-[#f6f8f4]' : 'border-gray-200 bg-white'
-                }`}
+        {/* التصنيف الفرعي */}
+        <div className="flex flex-col gap-2 grow basis-[320px]">
+          <span className="text-[11px] text-gray-600">التصنيف الفرعي</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {currentSubs.map((sc) => (
+              <Chip
+                key={(mainCategory || 'all') + '-' + (sc.value || 'all-sub')}
+                active={category === sc.value}
+                onClick={() => handlePickSub(sc.value)}
+                ariaLabel={`sub-${sc.label}`}
               >
-                {/* رأس المجموعة (أكورديون في الهاتف / ثابت في الكمبيوتر) */}
-                <button
-                  type="button"
-                  onClick={() => toggleSection(main.value)}
-                  className="w-full flex items-center justify-between p-4 md:p-5 md:cursor-default"
-                  aria-expanded={isOpen}
-                  aria-controls={`panel-${main.value}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-block size-2 rounded-full ${
-                        isActive ? 'bg-[#3D4B2E]' : 'bg-gray-300'
-                      }`}
-                    />
-                    <h4 className="text-[15px] md:text-base font-semibold text-gray-800">{main.label}</h4>
-                  </div>
-
-                  {/* سهم موبايل فقط */}
-                  <svg
-                    className={`md:hidden h-5 w-5 text-gray-500 transition-transform ${
-                      isOpen ? 'rotate-180' : ''
-                    }`}
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path fillRule="evenodd" d="M10 12a1 1 0 0 1-.707-.293l-4-4A1 1 0 0 1 6.707 6.293L10 9.586l3.293-3.293A1 1 0 1 1 14.707 7.707l-4 4A1 1 0 0 1 10 12z" clipRule="evenodd" />
-                  </svg>
-                </button>
-
-                {/* لوحة الخيارات */}
-                <div
-                  id={`panel-${main.value}`}
-                  className={`px-4 pb-4 md:px-5 md:pb-5 ${isOpen ? 'block' : 'hidden md:block'}`}
-                >
-                  {/* شبكة أنيقة للخيارات */}
-                  <div className="grid grid-cols-1 gap-2">
-                    {subCategories[main.value]?.map((sub) => {
-                      const checked =
-                        filtersState.mainCategory === main.value &&
-                        filtersState.category === sub.value;
-
-                      return (
-                        <label
-                          key={`${main.value}-${sub.value || 'all'}`}
-                          className={`group flex items-center justify-between rounded-xl border px-3 py-2.5 cursor-pointer transition ${
-                            checked
-                              ? 'border-[#3D4B2E] bg-[#eef2ec]'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name={`radio-${main.value}`}
-                              value={sub.value}
-                              checked={checked}
-                              onChange={() => handlePick(main.value, sub.value)}
-                              className="accent-[#3D4B2E] ml-1"
-                              aria-label={`${main.label} - ${sub.label}`}
-                            />
-                            <span className="text-sm text-gray-800">{sub.label}</span>
-                          </div>
-
-                          {/* شارة اختيار */}
-                          <span
-                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                              checked ? 'bg-[#3D4B2E] text-white' : 'bg-gray-100 text-gray-600'
-                            }`}
-                          >
-                            {checked ? 'محدد' : 'اختر'}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
-            );
-          })}
+                {sc.label}
+              </Chip>
+            ))}
+          </div>
         </div>
+
+        {/* التوفّر */}
+        <div className="flex flex-col gap-2 grow basis-[260px]">
+          <span className="text-[11px] text-[#92B0B0]">التوفّر</span>
+          <Segmented
+            name="availability"
+            value={availability}
+            onChange={(val) => onChange('availability', val)}
+            options={[
+              { label: 'الكل', value: '' },
+              { label: 'متوفر', value: 'in' },
+              { label: 'غير متوفر', value: 'out' },
+            ]}
+          />
+        </div>
+
+        {/* السعر */}
+        <div className="flex flex-col gap-2 grow basis-[360px]">
+          <span className="text-[11px] text-gray-600">السعر</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 bg-white border border-[#92B0B0]/30 rounded-xl px-3 py-1.5">
+              <span className="text-[11px] text-gray-600">من</span>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={minPrice}
+                onChange={(e) => onChange('minPrice', e.target.value)}
+                className="h-8 w-28 border rounded-md px-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#92B0B0]/40 border-[#92B0B0]/30"
+                placeholder="0"
+              />
+            </label>
+            <label className="flex items-center gap-2 bg-white border border-[#92B0B0]/30 rounded-xl px-3 py-1.5">
+              <span className="text-[11px] text-gray-600">إلى</span>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={maxPrice}
+                onChange={(e) => onChange('maxPrice', e.target.value)}
+                className="h-8 w-28 border rounded-md px-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#92B0B0]/40 border-[#92B0B0]/30"
+                placeholder="مثال: 50"
+              />
+            </label>
+
+            {/* {Number.isFinite(Number(highestPrice)) && (
+              <span className="text-[11px] text-gray-600">
+                أعلى سعر: <span className="font-semibold">{Number(highestPrice).toFixed(3)} ر.ع</span>
+              </span>
+            )} */}
+          </div>
+        </div>
+
+        {/* الترتيب */}
+        <div className="flex flex-col gap-2 grow basis-[260px]">
+          <span className="text-[11px] text-gray-600">الترتيب</span>
+          <select
+            value={sort}
+            onChange={(e) => onChange('sort', e.target.value)}
+            className="w-60 h-9 border rounded-xl px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#92B0B0]/40 border-[#92B0B0]/30 bg-white"
+          >
+            {sortOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+                <button
+          onClick={clearFilters}
+          className="text-xs px-3 py-1.5 rounded-full bg-[#92B0B0] text-white hover:opacity-90 transition"
+        >
+          مسح الفلاتر
+        </button>
       </div>
-    </aside>
+    </nav>
   );
 };
 

@@ -46,7 +46,7 @@ const Checkout = () => {
       return;
     }
 
-    // نُضمّن اللون/المقاس المختارَين مع كل عنصر
+    // نُضمّن اللون/المقاس/العدد المختارة مع كل عنصر
     const body = {
       products: products.map(product => ({
         _id: product._id,
@@ -56,6 +56,10 @@ const Checkout = () => {
         image: Array.isArray(product.image) ? product.image[0] : product.image,
         chosenColor: product.chosenColor || product.color || undefined,
         chosenSize: product.chosenSize || product.size || undefined,
+        chosenOption: product.chosenOption?.label
+          ? { label: product.chosenOption.label }
+          : undefined,
+        chosenCount: product.chosenCount || undefined,
       })),
       customerName,
       customerPhone,
@@ -184,16 +188,21 @@ const Checkout = () => {
           {products.map((product) => {
             const chosenColor = product.chosenColor || product.color || '';
             const chosenSize  = product.chosenSize || product.size  || '';
+            const optionLabel = product.chosenOption?.label || '';
             return (
-              <div key={product._id + (chosenColor || '') + (chosenSize || '')} className="flex justify-between items-start py-2 border-b border-gray-100">
+              <div
+                key={product._id + (chosenColor || '') + (chosenSize || '') + (optionLabel || '')}
+                className="flex justify-between items-start py-2 border-b border-gray-100"
+              >
                 <div className="flex-1">
                   <span className="text-gray-700">
                     {product.name} × {product.quantity}
                   </span>
-                  {(chosenColor || chosenSize) && (
+                  {(chosenColor || chosenSize || optionLabel) && (
                     <div className="mt-1 text-xs text-gray-600 flex flex-wrap gap-2">
                       {chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {chosenColor}</span>}
-                      {chosenSize &&  <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {chosenSize}</span>}
+                      {chosenSize  && <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {chosenSize}</span>}
+                      {optionLabel && <span className="px-2 py-0.5 rounded-full border bg-gray-50">العدد: {optionLabel}</span>}
                     </div>
                   )}
                 </div>

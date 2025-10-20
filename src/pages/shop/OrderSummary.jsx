@@ -1,3 +1,4 @@
+// ========================= src/components/cart/OrderSummary.jsx =========================
 import React, { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCart, updateQuantity, removeFromCart } from '../../redux/features/cart/cartSlice';
@@ -7,17 +8,12 @@ const OrderSummary = ({ onClose }) => {
   const dispatch = useDispatch();
   const { products, totalPrice, country } = useSelector((store) => store.cart);
 
-  // العملة والعرض
   const currency = country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = country === 'الإمارات' ? 9.5 : 1;
 
-  // المجموع الفرعي بالريال العُماني (نفس وحدة حساب السيرفر)
   const subtotalOMR = Number(totalPrice) || 0;
-
-  // قاعدة الشحن التدرّجية
   const shippingFeeOMR = subtotalOMR < 10 ? 2 : (subtotalOMR <= 20 ? 1 : 0);
 
-  // للعرض
   const formattedSubtotal = (subtotalOMR * exchangeRate).toFixed(2);
   const formattedShipping = (shippingFeeOMR * exchangeRate).toFixed(2);
   const formattedGrand = ((subtotalOMR + shippingFeeOMR) * exchangeRate).toFixed(2);
@@ -35,13 +31,16 @@ const OrderSummary = ({ onClose }) => {
     };
   }, [subtotalOMR, exchangeRate]);
 
-  const handleClearCart = () => {
-    dispatch(clearCart());
-  };
+  const handleClearCart = () => dispatch(clearCart());
 
-  const dec = (id, chosenColor, chosenSize) => dispatch(updateQuantity({ id, type: 'decrement', chosenColor, chosenSize }));
-  const inc = (id, chosenColor, chosenSize) => dispatch(updateQuantity({ id, type: 'increment', chosenColor, chosenSize }));
-  const remove = (id, chosenColor, chosenSize) => dispatch(removeFromCart({ id, chosenColor, chosenSize }));
+  const dec = (id, chosenColor, chosenSize, optionLabel) =>
+    dispatch(updateQuantity({ id, type: 'decrement', chosenColor, chosenSize, optionLabel }));
+
+  const inc = (id, chosenColor, chosenSize, optionLabel) =>
+    dispatch(updateQuantity({ id, type: 'increment', chosenColor, chosenSize, optionLabel }));
+
+  const remove = (id, chosenColor, chosenSize, optionLabel) =>
+    dispatch(removeFromCart({ id, chosenColor, chosenSize, optionLabel }));
 
   return (
     <div className="bg-white mt-5 rounded-lg shadow-md border border-gray-200">
@@ -53,7 +52,7 @@ const OrderSummary = ({ onClose }) => {
           </span>
         </div>
 
-        {/* التحفيز على الشراء */}
+        {/* التحفيز */}
         <div className="p-4 rounded-lg bg-gradient-to-r from-amber-100 to-emerald-100 border border-[#92B0B0]">
           {subtotalOMR < 20 ? (
             <>
@@ -82,9 +81,7 @@ const OrderSummary = ({ onClose }) => {
               </div>
             </>
           ) : (
-            <p className="text-emerald-900 text-sm md:text-base">
-              🎉 مبروك! حصلت على <span className="font-semibold">شحن مجاني</span>.
-            </p>
+            <p className="text-emerald-900 text-sm md:text-base">🎉 مبروك! حصلت على <span className="font-semibold">شحن مجاني</span>.</p>
           )}
         </div>
 
@@ -98,9 +95,11 @@ const OrderSummary = ({ onClose }) => {
 
             const chosenColor = item.chosenColor || item.color || '';
             const chosenSize  = item.chosenSize  || item.size  || '';
+            const optionLabel = item.chosenOption?.label || '';
+            const optionStock = Number.isFinite(item.chosenOption?.stock) ? Number(item.chosenOption.stock) : undefined;
 
             return (
-              <div key={item._id + (chosenColor || '') + (chosenSize || '')} className="border rounded-lg p-3 md:p-4 shadow-sm bg-white">
+              <div key={item._id + (chosenColor || '') + (chosenSize || '') + (optionLabel || '')} className="border rounded-lg p-3 md:p-4 shadow-sm bg-white">
                 <div className="flex items-start gap-3">
                   <img
                     src={imgSrc}
@@ -112,7 +111,7 @@ const OrderSummary = ({ onClose }) => {
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-semibold text-gray-800">{item.name}</h3>
                       <button
-                        onClick={() => remove(item._id, chosenColor, chosenSize)}
+                        onClick={() => remove(item._id, chosenColor, chosenSize, optionLabel)}
                         className="text-red-500 hover:text-red-600 text-sm"
                         title="حذف المنتج"
                       >
@@ -120,18 +119,12 @@ const OrderSummary = ({ onClose }) => {
                       </button>
                     </div>
 
-                    {/* تفاصيل اللون/المقاس */}
-                    {(chosenColor || chosenSize) && (
-                      <div className="mt-1 text-xs text-gray-600 flex flex-wrap gap-2">
-                        {chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {chosenColor}</span>}
-                        {chosenSize &&  <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {chosenSize}</span>}
-                      </div>
-                    )}
+                    {/* ❌ تمت إزالة عرض تفاصيل (اللون/المقاس/العدد) هنا بطلبك */}
 
                     {/* تحكم الكمية */}
                     <div className="mt-2 flex items-center gap-2">
-                      <button
-                        onClick={() => dec(item._id, chosenColor, chosenSize)}
+                      {/* <button
+                        onClick={() => dec(item._id, chosenColor, chosenSize, optionLabel)}
                         className="w-8 h-8 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
                         disabled={item.quantity <= 1}
                         title="تقليل الكمية"
@@ -142,7 +135,7 @@ const OrderSummary = ({ onClose }) => {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => inc(item._id, chosenColor, chosenSize)}
+                        onClick={() => inc(item._id, chosenColor, chosenSize, optionLabel)}
                         className={`w-8 h-8 rounded-md border ${
                           atMax || outOfStock
                             ? 'border-gray-200 text-gray-300 cursor-not-allowed'
@@ -152,7 +145,7 @@ const OrderSummary = ({ onClose }) => {
                         title={atMax ? 'بلغت الحد المتاح من المخزون' : 'زيادة الكمية'}
                       >
                         +
-                      </button>
+                      </button> */}
 
                       <div className="ms-2">
                         {outOfStock ? (
@@ -165,16 +158,17 @@ const OrderSummary = ({ onClose }) => {
                           </span>
                         ) : (
                           <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            المتوفر: {stock}
+                            المتوفر: {Number.isFinite(optionStock) ? optionStock : stock}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* السعر الإجمالي لهذا العنصر */}
-                    <div className="mt-2 text-sm text-gray-700">
-                      السعر: {(item.price * exchangeRate * item.quantity).toFixed(2)} {currency}
-                    </div>
+                    {/* الأسعار */}
+                    {/* <div className="mt-2 text-sm text-gray-700">
+                      <div>سعر الوحدة: {(item.price * exchangeRate).toFixed(2)} {currency}</div>
+                      <div>الإجمالي: {(item.price * exchangeRate * item.quantity).toFixed(2)} {currency}</div>
+                    </div> */}
                   </div>
                 </div>
               </div>
@@ -198,13 +192,10 @@ const OrderSummary = ({ onClose }) => {
           </div>
         </div>
 
-        {/* أزرار الإجراءات */}
+        {/* أزرار */}
         <div className="px-1 mb-2">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClearCart();
-            }}
+            onClick={(e) => { e.stopPropagation(); handleClearCart(); }}
             className="w-full bg-red-500 px-3 py-2 text-white mt-2 rounded-md flex justify-center items-center gap-2 hover:bg-red-600 transition-colors"
           >
             <i className="ri-delete-bin-7-line" />

@@ -34,23 +34,43 @@ const PaymentSuccess = () => {
           
           setOrder(data.order);
           
-          // جلب تفاصيل المنتجات المعروضة
+          // جلب تفاصيل المنتجات المعروضة + ربط خصائص اللون/المقاس/العدد من الطلب
           const productsDetails = await Promise.all(
-            data.order.products.map(async (item) => {
-              const response = await fetch(`${getBaseUrl()}/api/products/${item.productId}`);
-              const productData = await response.json();
-              return {
-                ...productData.product,
-                quantity: item.quantity,
-                selectedSize: item.selectedSize
-              };
+            (data.order.products || []).map(async (item) => {
+              try {
+                const response = await fetch(`${getBaseUrl()}/api/products/${item.productId}`);
+                const productData = await response.json();
+                const base = productData.product || {};
+                return {
+                  ...base,
+                  quantity: item.quantity,
+                  // ✅ الحقول المضافة من الطلب:
+                  chosenSize:  item.chosenSize  || '',
+                  chosenColor: item.chosenColor || '',
+                  chosenCount: item.chosenCount || '',
+                };
+              } catch {
+                // في حال فشل جلب المنتج، استخدم بيانات العنصر من الطلب على الأقل
+                return {
+                  _id: item.productId,
+                  name: item.name,
+                  image: item.image,
+                  description: '',
+                  category: '',
+                  price: item.price,
+                  quantity: item.quantity,
+                  chosenSize:  item.chosenSize  || '',
+                  chosenColor: item.chosenColor || '',
+                  chosenCount: item.chosenCount || '',
+                };
+              }
             })
           );
           setProducts(productsDetails);
         })
         .catch((err) => {
           console.error("Error confirming payment", err);
-          setError(err.message);
+          setError(err.message || String(err));
         });
     } else {
       setError("No session ID found in the URL");
@@ -69,7 +89,7 @@ const PaymentSuccess = () => {
   const currency = order?.country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = order?.country === 'الإمارات' ? 9.5 : 1;
 
-  const formatPrice = (price) => (price * exchangeRate).toFixed(2);
+  const formatPrice = (price) => (Number(price || 0) * exchangeRate).toFixed(2);
 
   if (error) return <div className="text-red-500">خطأ: {error}</div>;
   if (!order) return <div>جارِ التحميل...</div>;
@@ -95,21 +115,44 @@ const PaymentSuccess = () => {
               </div>
               <div className="md:w-3/4">
                 <h4 className="text-lg font-semibold">{product.name}</h4>
-                <p className="text-gray-600 mt-2">{product.description}</p>
+                {product.description && (
+                  <p className="text-gray-600 mt-2">{product.description}</p>
+                )}
+
+                {/* الكمية */}
                 <div className="mt-2">
                   <span className="font-medium">الكمية: </span>
                   <span>{product.quantity}</span>
                 </div>
-                {product.category === 'حناء بودر' && product.selectedSize && (
-                  <div className="mt-2">
-                    <span className="font-medium">الحجم: </span>
-                    <span>{product.selectedSize}</span>
+
+                {/* ✅ عرض المقاس/اللون/العدد (chips) */}
+                {(product.chosenSize || product.chosenColor || product.chosenCount) && (
+                  <div className="mt-2 text-xs text-gray-700 flex flex-wrap gap-2">
+                    {product.chosenSize  && (
+                      <span className="px-2 py-0.5 rounded-full border bg-gray-50">
+                        المقاس: {product.chosenSize}
+                      </span>
+                    )}
+                    {product.chosenColor && (
+                      <span className="px-2 py-0.5 rounded-full border bg-gray-50">
+                        اللون: {product.chosenColor}
+                      </span>
+                    )}
+                    {product.chosenCount && (
+                      <span className="px-2 py-0.5 rounded-full border bg-gray-50">
+                        العدد: {product.chosenCount}
+                      </span>
+                    )}
                   </div>
                 )}
-                <div className="mt-2">
-                  <span className="font-medium">الفئة: </span>
-                  <span>{product.category}</span>
-                </div>
+
+                {/* الفئة (إن توفرت) */}
+                {product.category && (
+                  <div className="mt-2">
+                    <span className="font-medium">الفئة: </span>
+                    <span>{product.category}</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -122,17 +165,23 @@ const PaymentSuccess = () => {
         <div className="bg-gray-50 p-4 rounded-lg space-y-3">
           <div className="flex justify-between py-2">
             <span>السعر:</span>
-            <span className="font-semibold">{formatPrice(order.amount - order.shippingFee)} {currency}</span>
+            <span className="font-semibold">
+              {formatPrice((order.amount || 0) - (order.shippingFee || 0))} {currency}
+            </span>
           </div>
           
           <div className="flex justify-between py-2">
             <span>رسوم الشحن:</span>
-            <span className="font-semibold">{formatPrice(order.shippingFee)} {currency}</span>
+            <span className="font-semibold">
+              {formatPrice(order.shippingFee || 0)} {currency}
+            </span>
           </div>
           
           <div className="flex justify-between py-2 border-t pt-3">
             <span className="font-medium">الإجمالي النهائي:</span>
-            <span className="font-bold text-lg">{formatPrice(order.amount)} {currency}</span>
+            <span className="font-bold text-lg">
+              {formatPrice(order.amount || 0)} {currency}
+            </span>
           </div>
 
           {/* ✅ إظهار البريد الإلكتروني */}
