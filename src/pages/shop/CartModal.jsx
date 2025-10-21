@@ -60,6 +60,7 @@ const CartModal = ({ isOpen, onClose }) => {
               const chosenColor = product.chosenColor || product.color || '';
               const chosenSize  = product.chosenSize  || product.size  || '';
               const optionLabel = product.chosenOption?.label || '';
+              const chosenCount = product.chosenCount || '';
 
               return (
                 <div key={i} className="pb-5 border-b">
@@ -97,7 +98,7 @@ const CartModal = ({ isOpen, onClose }) => {
                             <div className="mt-1 text-[11px] text-gray-600 flex flex-wrap gap-1.5">
                               {chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {chosenColor}</span>}
                               {chosenSize  && <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {chosenSize}</span>}
-                              {optionLabel && <span className="px-2 py-0.5 rounded-full border bg-gray-50">العدد: {optionLabel}</span>}
+                              {optionLabel && <span className="px-2 py-0.5 rounded-full border bg-gray-50">عدد القطع: {optionLabel}</span>}
                             </div>
                           )}
                         </div>
@@ -110,7 +111,7 @@ const CartModal = ({ isOpen, onClose }) => {
                       {/* التحكم بالكمية + إزالة */}
                       <div className="mt-3 flex items-center gap-3">
                         <button
-                          onClick={() => dispatch(removeFromCart({ id: product._id, chosenColor, chosenSize, optionLabel }))}
+                          onClick={() => dispatch(removeFromCart({ id: product._id, chosenColor, chosenSize, optionLabel, chosenCount }))}
                           className="text-sm text-red-600 hover:text-red-700 underline underline-offset-2"
                         >
                           إزالة
@@ -118,7 +119,7 @@ const CartModal = ({ isOpen, onClose }) => {
 
                         <div className="inline-flex items-center border rounded-lg overflow-hidden">
                           <button
-                            onClick={() => dispatch(updateQuantity({ id: product._id, type: 'decrement', chosenColor, chosenSize, optionLabel }))}
+                            onClick={() => dispatch(updateQuantity({ id: product._id, type: 'decrement', chosenColor, chosenSize, optionLabel, chosenCount }))}
                             className="px-3 py-1.5 text-gray-700 hover:bg-gray-50"
                             aria-label="إنقاص الكمية"
                           >
@@ -128,7 +129,7 @@ const CartModal = ({ isOpen, onClose }) => {
                             {product.quantity}
                           </span>
                           <button
-                            onClick={() => dispatch(updateQuantity({ id: product._id, type: 'increment', chosenColor, chosenSize, optionLabel }))}
+                            onClick={() => dispatch(updateQuantity({ id: product._id, type: 'increment', chosenColor, chosenSize, optionLabel, chosenCount }))}
                             className="px-3 py-1.5 text-gray-700 hover:bg-gray-50"
                             aria-label="زيادة الكمية"
                           >

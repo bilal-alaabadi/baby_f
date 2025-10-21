@@ -288,7 +288,7 @@ ${itemsLines}
                                                                     <div className="mt-0.5 text-xs text-gray-600 flex flex-wrap gap-2">
                                                                         {product.chosenSize  && <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {product.chosenSize}</span>}
                                                                         {product.chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {product.chosenColor}</span>}
-                                                                        {product.chosenCount && <span className="px-2 py-0.5 rounded-full border bg-gray-50">العدد: {product.chosenCount}</span>}
+                                                                        {product.chosenCount && <span className="px-2 py-0.5 rounded-full border bg-gray-50">عدد القطع: {product.chosenCount}</span>}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -327,7 +327,7 @@ ${itemsLines}
                                                             <div className="mt-0.5 text-xs text-gray-600 flex flex-wrap gap-2">
                                                                 {product.chosenSize  && <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {product.chosenSize}</span>}
                                                                 {product.chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {product.chosenColor}</span>}
-                                                                {product.chosenCount && <span className="px-2 py-0.5 rounded-full border bg-gray-50">العدد: {product.chosenCount}</span>}
+                                                                {product.chosenCount && <span className="px-2 py-0.5 rounded-full border bg-gray-50">عدد القطع: {product.chosenCount}</span>}
                                                             </div>
                                                         )}
                                                         <div className="flex justify-between mt-1">

@@ -1,3 +1,4 @@
+// ========================= src/redux/features/cart/cartSlice.js =========================
 import { createSlice } from "@reduxjs/toolkit";
 
 /* ===================== أدوات التخزين ===================== */

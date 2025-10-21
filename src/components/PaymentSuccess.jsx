@@ -140,7 +140,7 @@ const PaymentSuccess = () => {
                     )}
                     {product.chosenCount && (
                       <span className="px-2 py-0.5 rounded-full border bg-gray-50">
-                        العدد: {product.chosenCount}
+                        عدد القطع: {product.chosenCount}
                       </span>
                     )}
                   </div>

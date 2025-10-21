@@ -288,7 +288,7 @@ const SingleProduct = () => {
               )}
               {productCount && (
                 <div className="text-gray-700">
-                  <span className="font-semibold">العدد:</span>{' '}
+                  <span className="font-semibold">عدد القطع:</span>{' '}
                   <span className="text-gray-600">{productCount}</span>
                 </div>
               )}
@@ -336,7 +336,7 @@ const SingleProduct = () => {
             {/* خيارات countPrices */}
             {hasOptions && (
               <div className="mt-5 text-gray-700">
-                <div className="font-semibold mb-2">اختر العدد:</div>
+                <div className="font-semibold mb-2">اختر عدد القطع:</div>
                 <div className="flex flex-wrap gap-3">
                   {countPrices.map((opt, idx) => {
                     const active = idx === selectedOptionIndex;
@@ -430,7 +430,7 @@ const SingleProduct = () => {
                 : hasColors && !selectedColor
                 ? 'اختر اللون أولاً'
                 : hasOptions && selectedOptionIndex < 0
-                ? 'اختر العدد أولاً'
+                ? 'اختر عدد القطع أولاً'
                 : `إضافة إلى السلة (${selectedQty})`}
             </button>
           </div>

@@ -202,7 +202,7 @@ const Checkout = () => {
                     <div className="mt-1 text-xs text-gray-600 flex flex-wrap gap-2">
                       {chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {chosenColor}</span>}
                       {chosenSize  && <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {chosenSize}</span>}
-                      {optionLabel && <span className="px-2 py-0.5 rounded-full border bg-gray-50">العدد: {optionLabel}</span>}
+                      {optionLabel && <span className="px-2 py-0.5 rounded-full border bg-gray-50">عدد القطع: {optionLabel}</span>}
                     </div>
                   )}
                 </div>
