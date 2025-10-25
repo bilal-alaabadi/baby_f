@@ -6,6 +6,10 @@ import { useFetchProductByIdQuery } from '../../../redux/features/products/produ
 import { addToCart } from '../../../redux/features/cart/cartSlice';
 import ReviewsCard from '../reviews/ReviewsCard';
 
+const getItemId = (x) => x?._id ?? x?.id ?? '';
+const getItemOptionLabel = (x) =>
+  (x?.chosenOption?.label ?? x?.optionLabel ?? x?.chosenCount ?? '').toString();
+
 const SingleProduct = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
@@ -16,7 +20,7 @@ const SingleProduct = () => {
     refetchOnReconnect: true,
   });
 
-  const { country } = useSelector((state) => state.cart);
+  const { country, products: cartProducts } = useSelector((state) => state.cart);
 
   const singleProduct = data?.product ?? data ?? null;
   const productReviews = singleProduct?.reviews || [];
@@ -24,14 +28,22 @@ const SingleProduct = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageScale, setImageScale] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-
-  // كمية الإضافة للسلة
   const [selectedQty, setSelectedQty] = useState(1);
 
-  // خيارات الألوان
-  const colors = Array.isArray(singleProduct?.colors) ? singleProduct.colors : [];
+  // الألوان + مخزون الألوان
+  const colorsFromProduct = Array.isArray(singleProduct?.colors) ? singleProduct.colors : [];
+  const colorsStock = Array.isArray(singleProduct?.colorsStock) ? singleProduct.colorsStock : [];
+  const colors = colorsFromProduct.length > 0
+    ? colorsFromProduct
+    : colorsStock.map(cs => cs?.color).filter(Boolean);
   const hasColors = colors.length > 0;
   const [selectedColor, setSelectedColor] = useState('');
+
+  const getColorStock = (c) => {
+    if (!c) return null;
+    const cs = colorsStock.find(x => String(x?.color || '').toLowerCase() === String(c).toLowerCase());
+    return typeof cs?.stock === 'number' ? Math.max(0, Number(cs.stock)) : null;
+  };
 
   // خيارات countPrices
   const countPrices = Array.isArray(singleProduct?.countPrices) ? singleProduct.countPrices : [];
@@ -40,7 +52,7 @@ const SingleProduct = () => {
     hasOptions && countPrices.length === 1 ? 0 : -1
   );
 
-  // خصائص إضافية
+  // خصائص إضافية (نصية)
   const productSize = singleProduct?.size || '';
   const productCount = singleProduct?.count || '';
 
@@ -63,6 +75,7 @@ const SingleProduct = () => {
     }
     setSelectedQty(1);
     setSelectedOptionIndex(hasOptions && countPrices.length === 1 ? 0 : -1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, hasColors, hasOptions]);
 
   // السعر المعروض
@@ -78,34 +91,200 @@ const SingleProduct = () => {
   }, [singleProduct, hasOptions, selectedOptionIndex, countPrices]);
 
   const price = unitPriceBase * exchangeRate;
-  const oldPrice = singleProduct?.oldPrice
-    ? Number(singleProduct.oldPrice) * exchangeRate
-    : null;
+  const oldPrice = singleProduct?.oldPrice ? Number(singleProduct.oldPrice) * exchangeRate : null;
   const showDiscount = !!oldPrice && oldPrice !== price;
-  const discountPercentage = showDiscount
-    ? Math.round(((oldPrice - price) / oldPrice) * 100)
-    : 0;
+  const discountPercentage = showDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
 
-  // المخزون
+  // المخزون العام
   const globalStock = Math.max(0, Number(singleProduct?.stock ?? 0));
+
+  // مخزون الخيار المختار (خام)
   const optionStock =
     hasOptions &&
     selectedOptionIndex >= 0 &&
     typeof countPrices[selectedOptionIndex].stock === 'number'
       ? Math.max(0, Number(countPrices[selectedOptionIndex].stock))
       : null;
-  const stock = optionStock != null ? optionStock : globalStock;
-  const isOutOfStock = stock === 0;
+
+  // مخزون اللون المختار (خام)
+  const colorStock =
+    hasColors && selectedColor
+      ? getColorStock(selectedColor)
+      : null;
+
+  const colorChosen = hasColors && !!selectedColor;
+  const optionChosen = hasOptions && selectedOptionIndex >= 0;
+
+  // --------- الحجز الافتراضي (جامع) ----------
+  const reservedSum = (colorMaybe, optionLabelMaybe) => {
+    const thisId = getItemId(singleProduct) || id;
+    return cartProducts.reduce((sum, p) => {
+      if (getItemId(p) !== thisId) return sum;
+
+      const pColor = (p.chosenColor || p.color || '').toString().toLowerCase();
+      const targetColor = (colorMaybe || '').toString().toLowerCase();
+
+      const pOptLabel = getItemOptionLabel(p);
+      const targetOptLabel = optionLabelMaybe != null ? String(optionLabelMaybe) : null;
+
+      let match = false;
+
+      if (colorMaybe && targetOptLabel != null) {
+        // لون + خيار (تطابق تام)
+        match = (pColor === targetColor) && (pOptLabel === targetOptLabel);
+      } else if (colorMaybe && targetOptLabel == null) {
+        // لون فقط: أي خيار
+        match = (pColor === targetColor);
+      } else if (!colorMaybe && targetOptLabel != null) {
+        // خيار فقط: أي لون
+        match = (pOptLabel === targetOptLabel);
+      } else {
+        // منتج عادي: أي سطر لنفس المنتج
+        match = true;
+      }
+
+      return match ? sum + (Number(p.quantity) || 0) : sum;
+    }, 0);
+  };
+
+  const rawOptionStockByLabel = (label) => {
+    const idx = countPrices.findIndex((cp) => String(cp.count) === String(label));
+    return idx >= 0 && typeof countPrices[idx]?.stock === 'number'
+      ? Math.max(0, Number(countPrices[idx].stock))
+      : null;
+  };
+
+  // متبقي للّون فقط (يخصم كل المحجوز لذلك اللون عبر كل الخيارات)
+  const remainingForColorOnly = (c) => {
+    const colorS = c ? getColorStock(c) : null;
+    if (!Number.isFinite(colorS)) return null;
+    const reserved = reservedSum(c, null);
+    return Math.max(0, colorS - reserved);
+  };
+
+  // متبقي للخيار فقط (يخصم كل المحجوز لذلك الخيار عبر كل الألوان)
+  const remainingForOptionOnly = (label) => {
+    const optS = rawOptionStockByLabel(label);
+    if (!Number.isFinite(optS)) return null;
+    const reserved = reservedSum(null, label);
+    return Math.max(0, optS - reserved);
+  };
+
+  // ✅ متبقي للتركيبة (لون × خيار) = min(متبقي اللون، متبقي الخيار)
+  // هذا يضمن أن حجز خيار قطع معيّن ينقص من باقي الألوان أيضاً
+  const pairRemaining = (c, label) => {
+    const colorRemain = remainingForColorOnly(c);
+    const optionRemain = remainingForOptionOnly(label);
+    if (!Number.isFinite(colorRemain) || !Number.isFinite(optionRemain)) return 0;
+    return Math.max(0, Math.min(colorRemain, optionRemain));
+  };
+
+  // وجود تركيبة متاحة لأي لون
+  const hasAnyPairForColor = (c) => {
+    if (!hasOptions) {
+      const r = remainingForColorOnly(c);
+      return Number.isFinite(r) && r > 0;
+    }
+    return countPrices.some((opt) => pairRemaining(c, String(opt.count)) > 0);
+  };
+
+  // وجود تركيبة متاحة لأي خيار
+  const hasAnyPairForOption = (label) => {
+    if (!hasColors) {
+      const r = remainingForOptionOnly(label);
+      return Number.isFinite(r) && r > 0;
+    }
+    return colors.some((c) => pairRemaining(c, label) > 0);
+  };
+
+  // هل توجد أي تركيبة متاحة على الإطلاق؟
+  const anyAvailableVariant = useMemo(() => {
+    if (!singleProduct) return false;
+
+    if (!hasColors && !hasOptions) {
+      const r = Math.max(0, globalStock - reservedSum(null, null));
+      return r > 0;
+    }
+    if (hasColors && !hasOptions) {
+      return colors.some((c) => hasAnyPairForColor(c));
+    }
+    if (!hasColors && hasOptions) {
+      return countPrices.some((opt) => hasAnyPairForOption(String(opt.count)));
+    }
+    // كلاهما موجودان
+    return colors.some((c) =>
+      countPrices.some((opt) => pairRemaining(c, String(opt.count)) > 0)
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [singleProduct, cartProducts, colors, countPrices, hasColors, hasOptions]);
+
+  const exhaustedAll = !anyAvailableVariant;
+
+  // المتبقي للعرض حسب الاختيار الحالي
+  const remainingAfterReserve = useMemo(() => {
+    if (!singleProduct) return null;
+
+    if (!hasColors && !hasOptions) {
+      return Math.max(0, globalStock - reservedSum(null, null));
+    }
+
+    if (hasColors && hasOptions) {
+      if (selectedColor && selectedOptionIndex >= 0) {
+        const label = String(countPrices[selectedOptionIndex]?.count ?? '');
+        return pairRemaining(selectedColor, label);
+      }
+      if (selectedColor && selectedOptionIndex < 0) {
+        return remainingForColorOnly(selectedColor);
+      }
+      if (!selectedColor && selectedOptionIndex >= 0) {
+        const label = String(countPrices[selectedOptionIndex]?.count ?? '');
+        return remainingForOptionOnly(label);
+      }
+      return null;
+    }
+
+    if (hasColors && selectedColor) return remainingForColorOnly(selectedColor);
+    if (hasOptions && selectedOptionIndex >= 0) {
+      const label = String(countPrices[selectedOptionIndex]?.count ?? '');
+      return remainingForOptionOnly(label);
+    }
+    return null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [singleProduct, cartProducts, selectedColor, selectedOptionIndex, hasColors, hasOptions]);
+
+  // تنظيف الاختيارات إن أصبحت غير صالحة (لا توجد أي تركيبة)
+  useEffect(() => {
+    if (!singleProduct) return;
+
+    if (hasColors && selectedColor) {
+      if (!hasAnyPairForColor(selectedColor)) setSelectedColor('');
+    }
+    if (hasOptions && selectedOptionIndex >= 0) {
+      const label = String(countPrices[selectedOptionIndex]?.count ?? '');
+      if (!hasAnyPairForOption(label)) setSelectedOptionIndex(-1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartProducts, hasColors, hasOptions, selectedColor, selectedOptionIndex]);
+
+  const shouldShowStockBlock = (() => {
+    if (!hasColors && !hasOptions) return true;
+    if (exhaustedAll) return false;
+    if (selectedColor || selectedOptionIndex >= 0) return true;
+    return false;
+  })();
+
+  const isOutOfStock = exhaustedAll || (Number.isFinite(remainingAfterReserve) && remainingAfterReserve <= 0);
 
   const clampQty = (v) => {
     if (!Number.isFinite(v)) return 1;
     if (v < 1) return 1;
-    if (stock > 0 && v > stock) return stock;
-    return v;
+    const limit = Number.isFinite(remainingAfterReserve) ? remainingAfterReserve : Infinity;
+    return Math.min(v, limit);
   };
 
-  // دالة إضافة المنتج للسلة
+  // =================== إضافة للسلة ===================
   const handleAddToCart = (product) => {
+    if (exhaustedAll) return;
     if (hasColors && !selectedColor) {
       alert('الرجاء اختيار اللون قبل الإضافة إلى السلة');
       return;
@@ -118,36 +297,61 @@ const SingleProduct = () => {
 
     setIsAddingToCart(true);
     const qty = clampQty(selectedQty);
-    const chosenOption =
+    const chosenOptionRaw =
       hasOptions && selectedOptionIndex >= 0 ? countPrices[selectedOptionIndex] : null;
+
+    const currentColorStock =
+      hasColors && selectedColor ? (Number.isFinite(getColorStock(selectedColor)) ? Number(getColorStock(selectedColor)) : undefined) : undefined;
+
+    const currentOptionStock =
+      hasOptions && chosenOptionRaw
+        ? (Number.isFinite(chosenOptionRaw?.stock) ? Number(chosenOptionRaw.stock) : undefined)
+        : undefined;
+
+    const maxStockForCart = (() => {
+      if (hasColors && hasOptions) {
+        const a = Number.isFinite(currentColorStock) ? currentColorStock : undefined;
+        const b = Number.isFinite(currentOptionStock) ? currentOptionStock : undefined;
+        if (a != null && b != null) return Math.min(a, b);
+        if (a != null) return a;
+        if (b != null) return b;
+        return undefined;
+      }
+      if (hasColors) return currentColorStock;
+      if (hasOptions) return currentOptionStock;
+      return Number.isFinite(globalStock) ? globalStock : undefined;
+    })();
+
+    const chosenOption =
+      chosenOptionRaw
+        ? {
+            label: String(chosenOptionRaw.count),
+            price: Number(chosenOptionRaw.price || 0),
+            ...(Number.isFinite(chosenOptionRaw.stock) ? { stock: Number(chosenOptionRaw.stock) } : {}),
+          }
+        : undefined;
 
     const productToAdd = {
       ...product,
       price: chosenOption
         ? Number(chosenOption.price || 0)
-        : product.regularPrice || product.price || 0,
+        : (Number(product.regularPrice) || Number(product.price) || 0),
+
       chosenColor: selectedColor || undefined,
       chosenSize: productSize || undefined,
-      chosenCount: productCount || undefined,
-      chosenOption: chosenOption
-        ? { label: chosenOption.count, price: Number(chosenOption.price || 0) }
-        : undefined,
+      chosenCount: chosenOption ? String(chosenOption.label) : (productCount || undefined),
+      chosenOption,
+
+      ...(Number.isFinite(currentColorStock) && { colorStock: Number(currentColorStock) }),
+      ...(Number.isFinite(currentOptionStock) && { optionStock: Number(currentOptionStock) }),
+      ...(Number.isFinite(maxStockForCart) && { maxStock: Number(maxStockForCart) }),
+
       quantity: qty,
     };
 
-    if (chosenOption && chosenOption.count) {
-      productToAdd.chosenCount = String(chosenOption.count);
-    }
-
     dispatch(addToCart(productToAdd));
-
-    // ✅ إعادة تعيين القيم بعد الإضافة
-    setSelectedColor('');
-    setSelectedOptionIndex(hasOptions && countPrices.length === 1 ? 0 : -1);
     setSelectedQty(1);
-    setCurrentImageIndex(0);
-
-    setTimeout(() => setIsAddingToCart(false), 600);
+    setIsAddingToCart(false);
   };
 
   if (isLoading) return <p>جاري التحميل...</p>;
@@ -155,11 +359,12 @@ const SingleProduct = () => {
   if (!singleProduct) return null;
 
   const disableAdd =
+    exhaustedAll ||
     isOutOfStock ||
     (hasColors && !selectedColor) ||
     (hasOptions && selectedOptionIndex < 0) ||
     selectedQty < 1 ||
-    (stock > 0 && selectedQty > stock);
+    (Number.isFinite(remainingAfterReserve) && selectedQty > remainingAfterReserve);
 
   return (
     <>
@@ -190,7 +395,6 @@ const SingleProduct = () => {
                   />
                 </div>
 
-                {/* أزرار التنقل */}
                 {singleProduct.image.length > 1 && (
                   <>
                     <button
@@ -216,7 +420,6 @@ const SingleProduct = () => {
                   </>
                 )}
 
-                {/* الصور المصغّرة */}
                 {singleProduct.image.length > 1 && (
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-4">
                     {singleProduct.image.map((img, idx) => {
@@ -259,26 +462,53 @@ const SingleProduct = () => {
             <div className="text-2xl text-[#F5A623] mb-4 space-x-1">
               {price.toFixed(2)} {currency}
               {showDiscount && (
-                <s className="text-red-500 text-sm ml-2">
-                  {oldPrice?.toFixed(2)} {currency}
-                </s>
+                <s className="text-red-500 text-sm ml-2">{oldPrice?.toFixed(2)} {currency}</s>
               )}
             </div>
 
-            <p
-              className={`mb-2 text-sm ${
-                isOutOfStock ? 'text-red-600' : 'text-lime-700'
-              }`}
-            >
-              المخزون: {stock}
-              {isOutOfStock && ' — غير متوفر حالياً'}
-            </p>
+            {/* في حال نفاد كل التركيبات */}
+            {!anyAvailableVariant && (
+              <div className="mb-3 text-sm text-red-600">
+                هذا المنتج غير متوفر حالياً بجميع المتغيرات.
+              </div>
+            )}
+
+            {/* سطور المخزون/المتبقي بعد الحجز */}
+            {(() => {
+              if (!anyAvailableVariant) return null;
+              const remainingText = Number.isFinite(remainingAfterReserve) ? remainingAfterReserve : null;
+              if (!hasColors && !hasOptions) {
+                return (
+                  <div className="mb-2 text-sm">
+                    <p className={remainingText === 0 ? 'text-red-600' : 'text-lime-700'}>
+                      المتبقي: {remainingText ?? Math.max(0, globalStock - reservedSum(null, null))}
+                    </p>
+                  </div>
+                );
+              }
+              if (!(colorChosen || optionChosen)) return null;
+
+              return (
+                <div className="mb-2 text-sm space-y-1">
+                  {hasColors && selectedColor && (
+                    <p className={remainingText === 0 ? 'text-red-600' : 'text-lime-700'}>
+                      المتبقي للّون "{selectedColor}": {remainingText ?? 0}
+                    </p>
+                  )}
+                  {hasOptions && selectedOptionIndex >= 0 && (
+                    <p className={remainingText === 0 ? 'text-red-600' : 'text-lime-700'}>
+                      المتبقي لعدد القطع "{countPrices[selectedOptionIndex].count}": {remainingText ?? 0}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             <p className="text-gray-600 mt-4 leading-relaxed whitespace-pre-line">
               {singleProduct.description}
             </p>
 
-            {/* المقاس والعدد */}
+            {/* المقاس والعدد النصي */}
             <div className="flex flex-col gap-3 mt-4">
               {productSize && (
                 <div className="text-gray-700">
@@ -294,37 +524,37 @@ const SingleProduct = () => {
               )}
             </div>
 
-            {/* الألوان */}
+            {/* الألوان — تتعطّل إذا ولا تركيبة متاحة لهذا اللون */}
             {hasColors && (
               <div className="text-gray-700 mt-4">
                 <div className="font-semibold mb-2">اختر اللون:</div>
                 <div className="flex flex-wrap gap-3">
                   {colors.map((c, idx) => {
-                    const active =
-                      (selectedColor || '').toLowerCase() ===
-                      String(c).toLowerCase();
+                    const hasPair = hasAnyPairForColor(c);
+                    const out = !hasPair || !anyAvailableVariant;
+                    const active = (selectedColor || '').toLowerCase() === String(c).toLowerCase();
+
                     return (
                       <button
                         key={`${c}-${idx}`}
                         type="button"
                         onClick={() => {
+                          if (out) return;
                           setSelectedColor(c);
-                          if (
-                            Array.isArray(singleProduct.image) &&
-                            singleProduct.image[idx]
-                          ) {
+                          if (Array.isArray(singleProduct.image) && singleProduct.image[idx]) {
                             setCurrentImageIndex(idx);
                           }
                         }}
-                        className={`flex items-center justify-center px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                        disabled={out}
+                        className={`relative flex items-center justify-center px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                           active
                             ? 'bg-[#92B0B0] text-white shadow-md'
-                            : 'bg-[#92B0B0] text-white opacity-80 hover:opacity-100'
+                            : out
+                              ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                              : 'bg-[#92B0B0] text-white opacity-80 hover:opacity-100'
                         }`}
+                        title={out ? 'غير متوفر' : undefined}
                       >
-                        {active && (
-                          <span className="inline-block w-2 h-2 bg-cyan-400 rounded-full ml-2"></span>
-                        )}
                         {c}
                       </button>
                     );
@@ -333,37 +563,36 @@ const SingleProduct = () => {
               </div>
             )}
 
-            {/* خيارات countPrices */}
+            {/* خيارات القطع — تتعطّل إذا ولا تركيبة متاحة لهذا الخيار */}
             {hasOptions && (
               <div className="mt-5 text-gray-700">
                 <div className="font-semibold mb-2">اختر عدد القطع:</div>
                 <div className="flex flex-wrap gap-3">
                   {countPrices.map((opt, idx) => {
+                    const label = String(opt.count);
+                    const hasPair = hasAnyPairForOption(label);
+                    const out = !hasPair || !anyAvailableVariant;
                     const active = idx === selectedOptionIndex;
-                    const optStock =
-                      typeof opt.stock === 'number'
-                        ? Math.max(0, Number(opt.stock))
-                        : null;
+
                     return (
                       <button
                         key={`${opt.count}-${idx}`}
                         type="button"
-                        onClick={() => setSelectedOptionIndex(idx)}
+                        onClick={() => {
+                          if (out) return;
+                          setSelectedOptionIndex(idx);
+                        }}
+                        disabled={out}
                         className={`flex items-center justify-center px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                          active
+                          active && !out
                             ? 'bg-[#92B0B0] text-white shadow-md'
-                            : 'bg-[#92B0B0] text-white opacity-80 hover:opacity-100'
+                            : out
+                              ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                              : 'bg-[#92B0B0] text-white opacity-80 hover:opacity-100'
                         }`}
+                        title={out ? 'غير متوفر' : undefined}
                       >
-                        {active && (
-                          <span className="inline-block w-2 h-2 bg-cyan-400 rounded-full ml-2"></span>
-                        )}
                         <span className="font-medium">{opt.count}</span>
-                        {optStock != null && (
-                          <span className="text-xs ml-3">
-                            المتوفر: {optStock}
-                          </span>
-                        )}
                       </button>
                     );
                   })}
@@ -376,10 +605,10 @@ const SingleProduct = () => {
               <div className="flex items-center gap-3 w-full max-w-xs">
                 <button
                   type="button"
-                  onClick={() => setSelectedQty((q) => clampQty(q - 1))}
-                  disabled={selectedQty <= 1}
+                  onClick={() => setSelectedQty((q) => Math.max(1, q - 1))}
+                  disabled={selectedQty <= 1 || !anyAvailableVariant}
                   className={`w-10 h-10 rounded-md border transition ${
-                    selectedQty <= 1
+                    (selectedQty <= 1 || !anyAvailableVariant)
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200'
                       : 'border-[#92B0B0] text-[#92B0B0] hover:bg-black hover:text-white'
                   }`}
@@ -390,21 +619,28 @@ const SingleProduct = () => {
                 <input
                   type="number"
                   min={1}
-                  max={stock || undefined}
+                  max={Number.isFinite(remainingAfterReserve) ? remainingAfterReserve : undefined}
                   value={selectedQty}
                   onChange={(e) => {
+                    if (!anyAvailableVariant) return;
                     const v = Number(e.target.value);
-                    setSelectedQty(clampQty(Number.isNaN(v) ? 1 : v));
+                    const limit = Number.isFinite(remainingAfterReserve) ? remainingAfterReserve : Infinity;
+                    const clamped = Math.min(Math.max(1, Number.isNaN(v) ? 1 : v), limit);
+                    setSelectedQty(clamped);
                   }}
-                  className="w-16 h-10 text-center border rounded-md border-[#92B0B0] focus:outline-none"
+                  disabled={!anyAvailableVariant}
+                  className="w-16 h-10 text-center border rounded-md border-[#92B0B0] focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
                 />
 
                 <button
                   type="button"
-                  onClick={() => setSelectedQty((q) => clampQty(q + 1))}
-                  disabled={stock > 0 ? selectedQty >= stock : false}
+                  onClick={() => setSelectedQty((q) => {
+                    if (!Number.isFinite(remainingAfterReserve)) return q + 1;
+                    return Math.min(q + 1, remainingAfterReserve);
+                  })}
+                  disabled={!anyAvailableVariant || (Number.isFinite(remainingAfterReserve) && selectedQty >= remainingAfterReserve)}
                   className={`w-10 h-10 rounded-md border transition ${
-                    stock > 0 && selectedQty >= stock
+                    !anyAvailableVariant || (Number.isFinite(remainingAfterReserve) && selectedQty >= remainingAfterReserve)
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200'
                       : 'border-[#92B0B0] text-[#92B0B0] hover:bg-black hover:text-white'
                   }`}
@@ -421,17 +657,17 @@ const SingleProduct = () => {
                 if (!disableAdd) handleAddToCart(singleProduct);
               }}
               disabled={disableAdd}
-              className={`mt-6 px-6 py-3 text-white rounded-md transition-all duration-200 relative overflow-hidden ${
+              className={`mt-6 px-6 py-3 text-white rounded-md transition-all	duration-200 relative overflow-hidden ${
                 disableAdd ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#92B0B0] hover:brightness-95'
               }`}
             >
-              {isOutOfStock
+              {!anyAvailableVariant
                 ? 'غير متوفر'
-                : hasColors && !selectedColor
+                : (hasColors && !selectedColor)
                 ? 'اختر اللون أولاً'
-                : hasOptions && selectedOptionIndex < 0
+                : (hasOptions && selectedOptionIndex < 0)
                 ? 'اختر عدد القطع أولاً'
-                : `إضافة إلى السلة (${selectedQty})`}
+                : (isOutOfStock ? 'غير متوفر' : `إضافة إلى السلة (${selectedQty})`)}
             </button>
           </div>
         </div>

@@ -41,7 +41,6 @@ const productsApi = createApi({
         const queryParams = new URLSearchParams(params).toString();
         return `/?${queryParams}`;
       },
-      // نعيد highestPrice للفلاتر
       transformResponse: (response) => ({
         products: response.products,
         totalPages: response.totalPages,
@@ -57,13 +56,10 @@ const productsApi = createApi({
           : ["ProductList"],
     }),
 
-    // تفاصيل منتج (تُطبع countPrices وتحوَّل الألوان إلى أسماء فقط)
+    // تفاصيل منتج (ندعم ألوان بمخزون + countPrices بمخزون)
     fetchProductById: builder.query({
       query: (id) => `/product/${id}`,
       transformResponse: (response) => {
-        // ندعم شكلين:
-        // 1) { product: {...}, reviews? }
-        // 2) {...} مباشرة كمنتج
         const product = response?.product ?? response;
         if (!product || typeof product !== "object") {
           throw new Error("المنتج غير موجود");
@@ -90,12 +86,23 @@ const productsApi = createApi({
               .filter((x) => x.count && !Number.isNaN(x.price) && x.price >= 0)
           : [];
 
-        // الألوان: نقبل ["أحمر", "أزرق"] أو [{name:"أحمر", image:"..."}, ...]
+        // colors (أسماء) + colorsStock [{color, stock}]
         const rawColors = Array.isArray(product.colors) ? product.colors : [];
         const colorNames = rawColors
           .map((c) => (typeof c === "string" ? c : String(c?.name || "")))
           .map((s) => s.trim())
           .filter(Boolean);
+
+        const normalizedColorsStock = Array.isArray(product.colorsStock)
+          ? product.colorsStock
+              .map(cs => ({
+                color: String(cs?.color ?? '').trim(),
+                stock: (cs?.stock === undefined || cs?.stock === null || cs?.stock === '')
+                  ? undefined
+                  : Number(cs.stock)
+              }))
+              .filter(cs => cs.color && typeof cs.stock === 'number' && cs.stock >= 0)
+          : [];
 
         // التقييمات
         const reviews =
@@ -109,7 +116,7 @@ const productsApi = createApi({
           category: product.category,
           size: product.size || "",
           count: product.count || "",
-          price: product.price, // السعر الأساسي (أقل سعر إن وُجدت خيارات يعالجه الباك/عند العرض)
+          price: product.price,
           oldPrice: product.oldPrice ?? "",
           description: product.description,
           image: images,
@@ -121,7 +128,8 @@ const productsApi = createApi({
           rating: product.rating ?? 0,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
-          colors: colorNames,                 // أسماء فقط لتوافق الواجهة
+          colors: colorNames.length ? colorNames : normalizedColorsStock.map(x=>x.color), // أسماء ألوان للعرض
+          colorsStock: normalizedColorsStock, // لعرض مخزون كل لون
           reviews,
           countPrices: normalizedCountPrices, // [{count, price, stock?}]
         };

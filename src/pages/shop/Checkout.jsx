@@ -1,3 +1,4 @@
+// ========================= frontend/src/components/checkout/Checkout.jsx =========================
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RiBankCardLine } from "react-icons/ri";
@@ -15,11 +16,9 @@ const Checkout = () => {
 
   const { products, totalPrice, country } = useSelector((state) => state.cart);
 
-  // العملة وسعر الصرف للعرض فقط
   const currency = country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = country === 'الإمارات' ? 9.5 : 1;
 
-  // ✅ حساب الشحن بالتدرج (بالريال العُماني) ثم تحويله للعرض
   const subtotalOMR = Number(totalPrice) || 0;
   const shippingFeeOMR = subtotalOMR < 10 ? 2 : (subtotalOMR <= 20 ? 1 : 0);
   const shippingFeeDisplay = (shippingFeeOMR * exchangeRate).toFixed(2);
@@ -46,7 +45,6 @@ const Checkout = () => {
       return;
     }
 
-    // نُضمّن اللون/المقاس/العدد المختارة مع كل عنصر
     const body = {
       products: products.map(product => ({
         _id: product._id,

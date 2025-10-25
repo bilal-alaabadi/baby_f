@@ -30,6 +30,9 @@ const subCategories = {
 
 const AddProduct = () => {
   const { user } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+  const [addProduct, { isLoading, error }] = useAddProductMutation();
+
   const [product, setProduct] = useState({
     name: '',
     mainCategory: '',
@@ -37,18 +40,25 @@ const AddProduct = () => {
     price: '',
     oldPrice: '',
     description: '',
-    stock: 1,
+    stock: 1, // الحالة العادية
     size: '',
     count: '',
   });
 
-  const [colors, setColors] = useState([]);
-  const [colorInput, setColorInput] = useState('');
-  const [optionsEnabled, setOptionsEnabled] = useState(false);
-  const [options, setOptions] = useState([{ name: '', price: '', stock: '' }]);
   const [image, setImage] = useState([]);
-  const [addProduct, { isLoading, error }] = useAddProductMutation();
-  const navigate = useNavigate();
+
+  // مفاتيح الحالات
+  const [optionsEnabled, setOptionsEnabled] = useState(false); // عدد القطع
+  const [colorsEnabled, setColorsEnabled] = useState(false);   // الألوان
+
+  // عدد القطع
+  const [options, setOptions] = useState([{ name: '', price: '', stock: '' }]);
+  // الألوان
+  const [colorRows, setColorRows] = useState([{ color: '', stock: '' }]);
+
+  // ألوان بسيطة للحالة العادية فقط (أسماء بدون مخزون)
+  const [colorsSimple, setColorsSimple] = useState([]);
+  const [colorInput, setColorInput] = useState('');
 
   useEffect(() => {
     setProduct((prev) => ({ ...prev, category: '' }));
@@ -59,47 +69,44 @@ const AddProduct = () => {
     setProduct((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ============ المخزون ============
+  // مخزون عام (الحالة 1)
   const setSafeStock = (val) => {
     const n = Number.isNaN(Number(val)) ? 0 : Math.floor(Number(val));
-    const clamped = Math.max(0, n);
-    setProduct((prev) => ({ ...prev, stock: clamped }));
+    setProduct((prev) => ({ ...prev, stock: Math.max(0, n) }));
   };
   const incStock = () => setSafeStock((product.stock || 0) + 1);
   const decStock = () => setSafeStock((product.stock || 0) - 1);
 
-  // ============ الألوان ============
-  const addColor = () => {
+  // ألوان بسيطة للحالة 1
+  const addColorSimple = () => {
     const c = (colorInput || '').trim();
     if (!c) return;
-    const exists = colors.some(x => x.toLowerCase() === c.toLowerCase());
-    if (exists) { setColorInput(''); return; }
-    setColors(prev => [...prev, c]);
+    if (colorsSimple.some(x => x.toLowerCase() === c.toLowerCase())) { setColorInput(''); return; }
+    setColorsSimple(prev => [...prev, c]);
     setColorInput('');
   };
-  const removeColor = (idx) => setColors(prev => prev.filter((_, i) => i !== idx));
+  const removeColorSimple = (idx) => setColorsSimple(prev => prev.filter((_, i) => i !== idx));
   const handleKeyDownOnColor = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); addColor(); }
+    if (e.key === 'Enter') { e.preventDefault(); addColorSimple(); }
   };
 
-  // ============ قسم الخيارات ============
-  const addOption = () => {
-    setOptions(prev => [...prev, { name: '', price: '', stock: '' }]);
-  };
-  const removeOption = (idx) => {
-    setOptions(prev => prev.filter((_, i) => i !== idx));
-  };
-  const updateOption = (idx, field, value) => {
-    setOptions(prev => prev.map((opt, i) => i === idx ? { ...opt, [field]: value } : opt));
-  };
+  // خيارات (عدد القطع)
+  const addOption = () => setOptions(prev => [...prev, { name: '', price: '', stock: '' }]);
+  const removeOption = (idx) => setOptions(prev => prev.filter((_, i) => i !== idx));
+  const updateOption = (idx, field, value) => setOptions(prev => prev.map((o,i)=> i===idx?{...o,[field]:value}:o));
 
+  // ألوان (بمخزون)
+  const addColorRow = () => setColorRows(prev => [...prev, { color: '', stock: '' }]);
+  const removeColorRow = (idx) => setColorRows(prev => prev.filter((_, i) => i !== idx));
+  const updateColorRow = (idx, field, value) => setColorRows(prev => prev.map((r,i)=> i===idx?{...r,[field]:value}:r));
+
+  // أقل سعر بين الخيارات (الحالة 2 أو 3)
   const minOptionPrice = useMemo(() => {
     const nums = options.map(o => Number(o.price)).filter(v => !Number.isNaN(v));
-    if (!nums.length) return null;
-    return Math.min(...nums);
+    return nums.length ? Math.min(...nums) : null;
   }, [options]);
 
-  // ============ الإرسال ============
+  // إرسال
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -111,69 +118,122 @@ const AddProduct = () => {
       'الصور': image.length > 0,
     };
 
+    // السعر الإجباري:
+    // - إذا optionsEnabled (حالة 2 أو 3): أقل سعر خيار
+    // - غير ذلك (حالة 1 أو ألوان فقط): السعر العام
     if (!optionsEnabled) {
       requiredBase['السعر'] = product.price;
-    } else if (options.length === 0) {
-      alert('أضف خيارًا واحدًا على الأقل.');
-      return;
+    } else {
+      if (options.length === 0) return alert('أضف خيارًا واحدًا على الأقل.');
+      const invalidOptForPrice = options.find(o => {
+        const nameOk = String(o.name||'').trim().length>0;
+        const priceOk = !Number.isNaN(Number(o.price)) && Number(o.price)>=0;
+        return !(nameOk && priceOk);
+      });
+      if (invalidOptForPrice) return alert('يجب تعبئة كل خيار باسم وسعر صحيح.');
     }
 
-    const missing = Object.entries(requiredBase).filter(([_, v]) => !v).map(([k]) => k);
-    if (missing.length > 0) {
-      alert(`الرجاء ملء/تصحيح الحقول التالية: ${missing.join('، ')}`);
-      return;
+    // تحقق المخزون حسب الحالات (بدون مصفوفة):
+    if (optionsEnabled) {
+      // في الحالة 2 أو 3، لكل count مخزون مطلوب
+      const invalidOptStock = options.find(o => {
+        const nameOk = String(o.name||'').trim().length>0;
+        const priceOk = !Number.isNaN(Number(o.price)) && Number(o.price)>=0;
+        const sp = o.stock !== '' && o.stock !== null && o.stock !== undefined;
+        const sInt = Math.floor(Number(o.stock));
+        const sOk = sp && !Number.isNaN(sInt) && sInt>=0;
+        return !(nameOk && priceOk && sOk);
+      });
+      if (invalidOptStock) return alert('لكل خيار: الاسم + السعر + المخزون مطلوبين (المخزون رقم صحيح).');
     }
+    if (colorsEnabled) {
+      // في الحالة 2 أو 3، لكل لون مخزون مطلوب
+      const invalidColor = colorRows.find(r => {
+        const nameOk = String(r.color||'').trim().length>0;
+        const sp = r.stock !== '' && r.stock !== null && r.stock !== undefined;
+        const sInt = Math.floor(Number(r.stock));
+        const sOk = sp && !Number.isNaN(sInt) && sInt>=0;
+        return !(nameOk && sOk);
+      });
+      if (invalidColor) return alert('لكل لون: الاسم + المخزون (رقم صحيح) مطلوبان.');
+    }
+
+    if (!optionsEnabled && !colorsEnabled) {
+      // الحالة 1: مخزون عام
+      requiredBase['الكمية (المخزون)'] = Number.isInteger(product.stock) && product.stock>=0;
+    }
+
+    const missing = Object.entries(requiredBase).filter(([_,v])=>!v).map(([k])=>k);
+    if (missing.length>0) return alert(`الرجاء إكمال: ${missing.join('، ')}`);
 
     try {
-      const priceToSend = optionsEnabled
-        ? Number(minOptionPrice ?? 0)
-        : Number(product.price);
+      // السعر الذي سنرسله
+      const basePrice = optionsEnabled ? Number(minOptionPrice ?? 0) : Number(product.price);
 
-      const countPrices = optionsEnabled
+      // حساب الإجمالي بدون مصفوفة:
+      const totalCountStock = optionsEnabled
+        ? options.reduce((s,o)=> s + Math.max(0, Math.floor(Number(o.stock||0))), 0)
+        : null;
+
+      const totalColorsStock = colorsEnabled
+        ? colorRows.reduce((s,c)=> s + Math.max(0, Math.floor(Number(c.stock||0))), 0)
+        : null;
+
+      const finalStock = (() => {
+        if (optionsEnabled && colorsEnabled) {
+          // الحالة 3: بدون ربط، نأخذ الحد الأدنى بين الإجماليين
+          return Math.min(totalCountStock || 0, totalColorsStock || 0);
+        } else if (optionsEnabled) {
+          return totalCountStock || 0;
+        } else if (colorsEnabled) {
+          return totalColorsStock || 0;
+        } else {
+          return Number(product.stock || 0);
+        }
+      })();
+
+      // تحضير الحقول للإرسال
+      const colorsPlain = colorsEnabled
+        ? colorRows.map(r => String(r.color||'').trim()).filter(Boolean)
+        : colorsSimple;
+
+      const colorsStockPayload = colorsEnabled
+        ? colorRows.map(r => ({
+            color: String(r.color).trim(),
+            stock: Math.max(0, Math.floor(Number(r.stock))),
+          }))
+        : undefined;
+
+      const countPricesPayload = optionsEnabled
         ? options.map(o => ({
             count: String(o.name).trim(),
             price: Number(o.price),
-            stock: (o.stock === '' || o.stock === null)
-              ? undefined
-              : Math.floor(Number(o.stock))
+            stock: Math.max(0, Math.floor(Number(o.stock))),
           }))
         : [];
 
-      // === إصلاح حفظ المخزون عند تفعيل الخيارات ===
-      // إذا لم تُدخل مخزونات للخيار، لا نجمع 0 بل نستخدم المخزون العام
-      const optionStocks = optionsEnabled
-        ? countPrices
-            .map(x => (typeof x.stock === 'number' && x.stock >= 0 ? x.stock : null))
-            .filter(v => v !== null)
-        : [];
-
-      const totalOptionStock = optionsEnabled
-        ? (optionStocks.length ? optionStocks.reduce((a, b) => a + b, 0) : null)
-        : null;
-
       await addProduct({
         ...product,
-        price: priceToSend,
+        price: basePrice,
         oldPrice: product.oldPrice ? Number(product.oldPrice) : undefined,
-        stock: optionsEnabled
-          ? (totalOptionStock != null ? totalOptionStock : Number(product.stock || 0))
-          : Number(product.stock),
-        size: product.size?.trim() ? product.size.trim() : undefined,
-        colors,
+        stock: finalStock,
+        size: product.size?.trim() || undefined,
+        colors: colorsPlain,                  // أسماء الألوان فقط للتوافق
+        colorsStock: colorsStockPayload,      // عند تفعيل الألوان
+        countPrices: countPricesPayload,      // عند تفعيل عدد القطع
+        variants: undefined,                  // لا نستخدم الربط إطلاقًا
         image,
         author: user?._id,
-        countPrices,
       }).unwrap();
 
       alert('تمت إضافة المنتج بنجاح');
       navigate('/shop');
     } catch (err) {
-      console.log('Failed to submit product', err);
+      console.error('Failed to submit product', err);
       alert('حدث خطأ أثناء إضافة المنتج');
     }
   };
 
-  // ============ JSX ============
   return (
     <div className="container mx-auto mt-8" dir="rtl">
       <h2 className="text-2xl font-bold mb-6">إضافة منتج جديد</h2>
@@ -186,21 +246,47 @@ const AddProduct = () => {
 
       <form onSubmit={handleSubmit} className="space-y-5">
 
-        {/* تفعيل/تعطيل قسم الخيارات */}
-        <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-          <div className="font-medium">تفعيل/تعطيل قسم عدد القطع </div>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={optionsEnabled}
-              onChange={(e) => setOptionsEnabled(e.target.checked)}
-            />
-            <span className="text-sm">تفعيل</span>
-          </label>
+        {/* مفاتيح الحالات */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+            <div className="font-medium">تفعيل قسم عدد القطع</div>
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={optionsEnabled}
+                onChange={(e) => setOptionsEnabled(e.target.checked)}
+              />
+              <span className="text-sm">{optionsEnabled ? 'مفعّل' : 'غير مفعّل'}</span>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+            <div className="font-medium">تفعيل الألوان</div>
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={colorsEnabled}
+                onChange={(e) => setColorsEnabled(e.target.checked)}
+              />
+              <span className="text-sm">{colorsEnabled ? 'مفعّل' : 'غير مفعّل'}</span>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+            <div className="font-medium">الوضع الحالي</div>
+            <div className="text-xs">
+              {optionsEnabled && colorsEnabled
+                ? 'ألوان + عدد القطع (بدون ربط)'
+                : optionsEnabled
+                  ? 'عدد القطع فقط'
+                  : colorsEnabled
+                    ? 'الألوان فقط'
+                    : 'عادي'}
+            </div>
+          </div>
         </div>
 
         <TextInput label="أسم المنتج" name="name" placeholder="أكتب أسم المنتج" value={product.name} onChange={handleChange} />
-
         <SelectInput label="الفئة الرئيسية" name="mainCategory" value={product.mainCategory} onChange={handleChange} options={mainCategories} />
 
         <SelectInput
@@ -213,7 +299,7 @@ const AddProduct = () => {
 
         <TextInput label="المقاس (اختياري)" name="size" type="text" placeholder="مثال: XL أو 24cm" value={product.size} onChange={handleChange} />
 
-        {/* السعر العام (فقط عند تعطيل الخيارات) */}
+        {/* السعر العام: يظهر إلا إذا كان optionsEnabled=true */}
         {!optionsEnabled && (
           <>
             <TextInput label="السعر القديم (اختياري)" name="oldPrice" type="number" min="0" step="0.01" placeholder="100" value={product.oldPrice} onChange={handleChange} />
@@ -221,83 +307,115 @@ const AddProduct = () => {
           </>
         )}
 
-        {/* 🟢 الكمية (المخزون) دائمًا ظاهرة */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">الكمية (المخزون)</label>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={decStock} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 border">−</button>
-            <input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              step="1"
-              value={product.stock}
-              onChange={(e) => setSafeStock(e.target.value)}
-              className="add-product-InputCSS w-28 text-center"
-            />
-            <button type="button" onClick={incStock} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 border">+</button>
+        {/* المخزون العام: يظهر فقط في الحالة العادية */}
+        {!optionsEnabled && !colorsEnabled && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">الكمية (المخزون)</label>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={decStock} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 border">−</button>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1"
+                value={product.stock}
+                onChange={(e) => setSafeStock(e.target.value)}
+                className="add-product-InputCSS w-28 text-center"
+              />
+              <button type="button" onClick={incStock} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 border">+</button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* قسم الخيارات */}
+        {/* عدد القطع (اسم + سعر + مخزون لكل count) */}
         {optionsEnabled && (
           <div className="space-y-3 p-3 border rounded-lg bg-slate-800/5">
             <div className="flex items-center justify-between">
-              <span className="font-medium">قسم الخيارات</span>
+              <span className="font-medium">قسم عدد القطع</span>
               <button type="button" onClick={addOption} className="text-sm px-3 py-1 rounded-md border bg-gray-100 hover:bg-gray-200">إضافة خيار +</button>
             </div>
 
             {options.map((opt, idx) => (
               <div key={idx} className="rounded-lg border p-3 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-sm mb-1">عدد القطع</label>
                     <input type="text" className="add-product-InputCSS w-full" placeholder="مثال: 32 قطعة" value={opt.name} onChange={(e) => updateOption(idx, 'name', e.target.value)} />
                   </div>
                   <div>
-                    <label className="block text-sm mb-1">(اختياري) سعر القطع</label>
+                    <label className="block text-sm mb-1">سعر الخيار</label>
                     <input type="number" min="0" step="0.01" className="add-product-InputCSS w-full" placeholder="مثال: 6.89" value={opt.price} onChange={(e) => updateOption(idx, 'price', e.target.value)} />
                   </div>
+                  <div>
+                    <label className="block text-sm mb-1">مخزون هذا العدد</label>
+                    <input type="number" min="0" step="1" className="add-product-InputCSS w-full" placeholder="مثال: 10" value={opt.stock} onChange={(e) => updateOption(idx, 'stock', e.target.value)} />
+                  </div>
                 </div>
+
                 <div className="flex justify-end">
                   <button type="button" onClick={() => removeOption(idx)} className="px-4 py-2 rounded-md bg-orange-500 text-white hover:bg-orange-600">حذف الخيار</button>
                 </div>
               </div>
             ))}
-
-            {minOptionPrice != null && (
-              <p className="text-xs text-gray-600">أقل سعر بين الخيارات الحالية: {minOptionPrice}</p>
-            )}
           </div>
         )}
 
-        {/* الألوان */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            الألوان المتوفرة (اختياري)
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              className="add-product-InputCSS flex-1"
-              placeholder="اكتب اسم اللون ثم اضغط إضافة"
-              value={colorInput}
-              onChange={(e) => setColorInput(e.target.value)}
-              onKeyDown={handleKeyDownOnColor}
-            />
-            <button type="button" onClick={addColor} className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-black">إضافة لون</button>
-          </div>
-          {colors.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {colors.map((c, i) => (
-                <span key={`${c}-${i}`} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border bg-gray-50 text-sm">
-                  {c}
-                  <button type="button" onClick={() => removeColor(i)} className="text-red-600 hover:text-red-700">×</button>
-                </span>
-              ))}
+        {/* الألوان (اسم + مخزون لكل لون) */}
+        {colorsEnabled && (
+          <div className="space-y-3 p-3 border rounded-lg bg-slate-800/5">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">قسم الألوان</span>
+              <button type="button" onClick={addColorRow} className="text-sm px-3 py-1 rounded-md border bg-gray-100 hover:bg-gray-200">إضافة لون +</button>
             </div>
-          )}
-        </div>
+
+            {colorRows.map((row, idx) => (
+              <div key={idx} className="rounded-lg border p-3 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm mb-1">اسم اللون</label>
+                    <input type="text" className="add-product-InputCSS w-full" placeholder="مثال: أحمر" value={row.color} onChange={(e) => updateColorRow(idx, 'color', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">مخزون هذا اللون</label>
+                    <input type="number" min="0" step="1" className="add-product-InputCSS w-full" placeholder="مثال: 15" value={row.stock} onChange={(e) => updateColorRow(idx, 'stock', e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button type="button" onClick={() => removeColorRow(idx)} className="px-4 py-2 rounded-md bg-orange-500 text-white hover:bg-orange-600">حذف اللون</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ألوان بسيطة للحالة العادية فقط */}
+        {!colorsEnabled && (
+          <div>
+            {/* <label className="block text-sm font-medium text-gray-700 mb-1">الألوان المتوفرة (اختياري)</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="add-product-InputCSS flex-1"
+                placeholder="اكتب اسم اللون ثم اضغط إضافة"
+                value={colorInput}
+                onChange={(e) => setColorInput(e.target.value)}
+                onKeyDown={handleKeyDownOnColor}
+              />
+              <button type="button" onClick={addColorSimple} className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-black">إضافة لون</button>
+            </div> */}
+            {colorsSimple.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {colorsSimple.map((c, i) => (
+                  <span key={`${c}-${i}`} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border bg-gray-50 text-sm">
+                    {c}
+                    <button type="button" onClick={() => removeColorSimple(i)} className="text-red-600 hover:text-red-700">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <UploadImage name="image" id="image" uploaded={image} setImage={setImage} />
 

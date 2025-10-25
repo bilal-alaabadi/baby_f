@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import RatingStars from '../../components/RatingStars';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../redux/features/cart/cartSlice';
 
 const ProductCards = ({ products }) => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const [addedItems, setAddedItems] = useState({});
     const { country } = useSelector((state) => state.cart);
     
@@ -24,17 +25,14 @@ const ProductCards = ({ products }) => {
     };
 
     const handleAddToCart = (productId, product) => {
-        const originalPrice = product.regularPrice || product.price || 0;
-        
-        dispatch(addToCart({
-            ...product,
-            price: originalPrice
-        }));
+        // الانتقال مباشرة إلى صفحة المنتج الفردي
+        navigate(`/shop/${productId}`);
+    };
 
-        setAddedItems(prev => ({ ...prev, [productId]: true }));
-        setTimeout(() => {
-            setAddedItems(prev => ({ ...prev, [productId]: false }));
-        }, 1000);
+    const handleImageClick = (productId, e) => {
+        // منع الانتقال المزدوج إذا تم النقر على الزر والصورة معاً
+        e.preventDefault();
+        navigate(`/shop/${productId}`);
     };
 
     const renderPrice = (product) => {
@@ -74,7 +72,11 @@ const ProductCards = ({ products }) => {
                         )}
 
                         <div className='relative flex-grow'>
-                            <Link to={`/shop/${product._id}`} className="block h-full">
+                            <Link 
+                                to={`/shop/${product._id}`} 
+                                className="block h-full"
+                                onClick={(e) => handleImageClick(product._id, e)}
+                            >
                                 <div className="h-64 w-full overflow-hidden">
                                     <img
                                         src={product.image?.[0] || "https://via.placeholder.com/300"}
@@ -97,18 +99,20 @@ const ProductCards = ({ products }) => {
                                     className={`p-2 text-white rounded-full shadow-md transition-all duration-300 ${
                                         addedItems[product._id] ? 'bg-green-500' : 'bg-[#92B0B0] hover:bg-[#c19e22]'
                                     }`}
+                                    title="انتقل إلى صفحة المنتج"
                                 >
-                                    {addedItems[product._id] ? (
-                                        <i className="ri-check-line"></i>
-                                    ) : (
-                                        <i className="ri-shopping-cart-2-line"></i>
-                                    )}
+                                    <i className="ri-shopping-cart-2-line"></i>
                                 </button>
                             </div>
                         </div>
 
                         <div className='p-4'>
-                            <h4 className="text-lg font-semibold mb-1">{product.name || "اسم المنتج"}</h4>
+                            <Link 
+                                to={`/shop/${product._id}`}
+                                className="block hover:text-[#92B0B0] transition-colors duration-200"
+                            >
+                                <h4 className="text-lg font-semibold mb-1">{product.name || "اسم المنتج"}</h4>
+                            </Link>
                             <p className="text-gray-500 text-sm mb-3">{product.category || "فئة غير محددة"}</p>
                             
                             {renderPrice(product)}

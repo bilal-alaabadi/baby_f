@@ -10,7 +10,6 @@ const ShopPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [filtersState, setFiltersState] = useState({
-    mainCategory: '',
     category: '',
     availability: '',  // '', 'in', 'out'
     minPrice: '',
@@ -20,20 +19,18 @@ const ShopPage = () => {
 
   // قراءة الفلاتر من URL أول مرة
   useEffect(() => {
-    const mainCategory = searchParams.get('mainCategory') || '';
     const category     = searchParams.get('category') || '';
     const availability = searchParams.get('availability') || '';
     const minPrice     = searchParams.get('minPrice') || '';
     const maxPrice     = searchParams.get('maxPrice') || '';
     const sort         = searchParams.get('sort') || 'createdAt:desc';
-    setFiltersState({ mainCategory, category, availability, minPrice, maxPrice, sort });
+    setFiltersState({ category, availability, minPrice, maxPrice, sort });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // مزامنة الفلاتر مع URL
   useEffect(() => {
     const params = {};
-    if (filtersState.mainCategory) params.mainCategory = filtersState.mainCategory;
     if (filtersState.category)     params.category     = filtersState.category;
     if (filtersState.availability) params.availability = filtersState.availability;
     if (filtersState.minPrice)     params.minPrice     = filtersState.minPrice;
@@ -50,7 +47,6 @@ const ShopPage = () => {
     error,
     isLoading
   } = useFetchAllProductsQuery({
-    mainCategory: filtersState.mainCategory,
     category: filtersState.category,
     availability: filtersState.availability,
     minPrice: filtersState.minPrice,
@@ -64,7 +60,6 @@ const ShopPage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [
-    filtersState.mainCategory,
     filtersState.category,
     filtersState.availability,
     filtersState.minPrice,
@@ -74,7 +69,6 @@ const ShopPage = () => {
 
   const clearFilters = () => {
     setFiltersState({
-      mainCategory: '',
       category: '',
       availability: '',
       minPrice: '',
@@ -99,8 +93,8 @@ const ShopPage = () => {
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center" />
       </section>
 
-      {/* شريط فلاتر أفقي */}
-      <div className="section__container pt-6">
+      {/* شريط فلاتر */}
+      <div className=" pt-6">
         <ShopFiltering
           filtersState={filtersState}
           setFiltersState={setFiltersState}
@@ -109,12 +103,12 @@ const ShopPage = () => {
         />
       </div>
 
-      {/* عدد النتائج (اختياري) */}
-      <div className="section__container py-3">
+      {/* عدد النتائج */}
+      {/* <div className="section__container py-3">
         <p className="text-xs text-gray-600" dir="rtl">
           النتائج: <span className="font-semibold">{totalProducts}</span>
         </p>
-      </div>
+      </div> */}
 
       {/* قائمة المنتجات + صفحات */}
       <section className='section__container'>

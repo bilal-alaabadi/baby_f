@@ -5,6 +5,33 @@ import { useSelector, useDispatch } from 'react-redux';
 import { updateQuantity, removeFromCart } from '../../redux/features/cart/cartSlice';
 import OrderSummary from './OrderSummary';
 
+const buildVariantKey = (obj) => {
+  const id = obj._id ?? obj.id ?? '';
+  const color = (obj.chosenColor || obj.color || '').toString().trim().toLowerCase();
+  const size = (obj.chosenSize || obj.size || '').toString().trim().toLowerCase();
+  const optionLabel = (obj.chosenOption?.label || obj.optionLabel || '').toString().trim().toLowerCase();
+  const chosenCount = (obj.chosenCount || '').toString().trim().toLowerCase();
+  return [id, color, size, optionLabel, chosenCount].join('|');
+};
+
+const numOrNull = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+const getEffectiveStock = (p) => {
+  const ms = numOrNull(p?.maxStock);
+  if (ms != null) return Math.max(0, ms);
+  const cs = numOrNull(p?.colorStock);
+  const os = numOrNull(p?.chosenOption?.stock) ?? numOrNull(p?.optionStock);
+  if (cs != null && os != null) return Math.max(0, Math.min(cs, os));
+  if (cs != null) return Math.max(0, cs);
+  if (os != null) return Math.max(0, os);
+  const base = numOrNull(p?.stock);
+  return base != null ? Math.max(0, base) : null;
+};
+
+const getReservedFromOthers = (all, index) => {
+  const key = buildVariantKey(all[index]);
+  return all.reduce((sum, p, i) => (i !== index && buildVariantKey(p) === key ? sum + (Number(p.quantity) || 0) : sum), 0);
+};
+
 const CartModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const { country, products: cartProducts = [] } = useSelector((state) => state.cart);
@@ -62,8 +89,13 @@ const CartModal = ({ isOpen, onClose }) => {
               const optionLabel = product.chosenOption?.label || '';
               const chosenCount = product.chosenCount || '';
 
+              const stock = getEffectiveStock(product);
+              const reservedFromOthers = getReservedFromOthers(cartProducts, i);
+              const allowedMax = Number.isFinite(stock) ? Math.max(0, stock - reservedFromOthers) : Infinity;
+              const canIncrement = (Number(product.quantity) || 0) < allowedMax;
+
               return (
-                <div key={i} className="pb-5 border-b">
+                <div key={`${product._id || i}-${chosenColor}-${chosenSize}-${optionLabel}-${chosenCount}`} className="pb-5 border-b">
                   <div className="flex gap-3 flex-row-reverse">
                     <img
                       src={mainImage}
@@ -79,27 +111,19 @@ const CartModal = ({ isOpen, onClose }) => {
                             {product.name}
                           </p>
 
-                          {/* ✅ عرض الفئة */}
-                          {product.category && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              الفئة: {product.category}
-                            </p>
-                          )}
-
-                          {/* ✅ عرض اسم المحمصة إذا كان موجودًا */}
-                          {!!product.roasterName && String(product.roasterName).trim() && (
-                            <p className="text-xs text-gray-600 mt-0.5">
-                              المحمصة: <span className="font-medium">{product.roasterName}</span>
-                            </p>
-                          )}
-
-                          {/* ✅ عرض اللون / المقاس / العدد */}
                           {(chosenColor || chosenSize || optionLabel) && (
                             <div className="mt-1 text-[11px] text-gray-600 flex flex-wrap gap-1.5">
                               {chosenColor && <span className="px-2 py-0.5 rounded-full border bg-gray-50">اللون: {chosenColor}</span>}
                               {chosenSize  && <span className="px-2 py-0.5 rounded-full border bg-gray-50">المقاس: {chosenSize}</span>}
                               {optionLabel && <span className="px-2 py-0.5 rounded-full border bg-gray-50">عدد القطع: {optionLabel}</span>}
                             </div>
+                          )}
+
+                          {/* المتوفر لهذا السطر بعد الحجز من الآخرين */}
+                          {Number.isFinite(stock) && (
+                            <p className={`mt-1 text-[11px] ${allowedMax <= 0 ? 'text-red-600' : 'text-lime-700'}`}>
+                              المتوفر: {Math.max(0, Number.isFinite(stock) ? (stock - reservedFromOthers) : 0)}
+                            </p>
                           )}
                         </div>
 
@@ -108,7 +132,6 @@ const CartModal = ({ isOpen, onClose }) => {
                         </p>
                       </div>
 
-                      {/* التحكم بالكمية + إزالة */}
                       <div className="mt-3 flex items-center gap-3">
                         <button
                           onClick={() => dispatch(removeFromCart({ id: product._id, chosenColor, chosenSize, optionLabel, chosenCount }))}
@@ -129,9 +152,14 @@ const CartModal = ({ isOpen, onClose }) => {
                             {product.quantity}
                           </span>
                           <button
-                            onClick={() => dispatch(updateQuantity({ id: product._id, type: 'increment', chosenColor, chosenSize, optionLabel, chosenCount }))}
-                            className="px-3 py-1.5 text-gray-700 hover:bg-gray-50"
+                            onClick={() => {
+                              if (canIncrement) {
+                                dispatch(updateQuantity({ id: product._id, type: 'increment', chosenColor, chosenSize, optionLabel, chosenCount }));
+                              }
+                            }}
+                            className={`px-3 py-1.5 text-gray-700 ${canIncrement ? 'hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'}`}
                             aria-label="زيادة الكمية"
+                            disabled={!canIncrement}
                           >
                             +
                           </button>
