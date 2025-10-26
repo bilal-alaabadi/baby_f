@@ -8,6 +8,20 @@ const sortOptions = [
   { label: 'الأقدم ثم الأحدث', value: 'createdAt:asc' },
 ];
 
+// ✅ خريطة: التصنيف الفرعي -> الفئة الأساسية المناسبة
+const SUB_TO_MAIN = {
+  // الألعاب
+  'ألعاب تعليمية': 'الألعاب',
+  'ألعاب تنمية المهارات': 'الألعاب',
+  'ألعاب ترفيهية': 'الألعاب',
+  'ألعاب رضع': 'الألعاب',
+
+  // مستلزمات المواليد
+  'سرير وأثاث الطفل': 'مستلزمات المواليد',
+  'مستلزمات استحمام': 'مستلزمات المواليد',
+  'مستلزمات أخرى': 'مستلزمات المواليد',
+};
+
 // جميع التصنيفات الفرعية (بدون تصنيف رئيسي)
 const ALL_SUB_CATEGORIES = [
   { label: 'الكل', value: '' },
@@ -85,8 +99,19 @@ const ShopFiltering = ({ filtersState, setFiltersState, clearFilters, highestPri
   const onChange = (name, value) =>
     setFiltersState(prev => ({ ...prev, [name]: value }));
 
+  // ✅ عند اختيار تصنيف فرعي: نحدّث category
+  // وإذا كان التصنيف الفرعي يتبع Main مختلفة، نحدّث mainCategory كذلك
   const handlePickSub = (val) => {
-    setFiltersState(prev => ({ ...prev, category: val }));
+    setFiltersState(prev => {
+      const next = { ...prev, category: val };
+      if (val) {
+        const inferredMain = SUB_TO_MAIN[val];
+        if (inferredMain && inferredMain !== prev.mainCategory) {
+          next.mainCategory = inferredMain;
+        }
+      }
+      return next;
+    });
   };
 
   // تحكم إظهار كامل لوحة الفلاتر على الجوال
@@ -179,13 +204,6 @@ const ShopFiltering = ({ filtersState, setFiltersState, clearFilters, highestPri
                     placeholder="مثال: 50"
                   />
                 </label>
-
-                {/* مؤشر أعلى سعر (اختياري) */}
-                {/* {Number.isFinite(Number(highestPrice)) && (
-                  <span className="text-[11px] text-gray-600">
-                    أعلى سعر: <span className="font-semibold">{Number(highestPrice).toFixed(3)} ر.ع</span>
-                  </span>
-                )} */}
               </div>
             </Collapsible>
           </div>

@@ -7,7 +7,7 @@ import { useSelector } from 'react-redux';
 import log from "../../assets/logo.png"; // شعار الأنثور
 
 const TrendingProducts = ({ onProductsLoaded }) => {
-  const [visibleProducts, setVisibleProducts] = useState(4);
+  const [visibleProducts, setVisibleProducts] = useState(8);
   const { country } = useSelector((state) => state.cart);
 
   const {
@@ -34,7 +34,7 @@ const TrendingProducts = ({ onProductsLoaded }) => {
   const currency = country === 'الإمارات' ? 'د.إ' : 'ر.ع.';
   const exchangeRate = country === 'الإمارات' ? 9.5 : 1;
 
-  const loadMoreProducts = () => setVisibleProducts((prev) => prev + 4);
+  const loadMoreProducts = () => setVisibleProducts((prev) => prev + 8);
 
   const getFirstPrice = (product) => {
     if (!product) return 0;

@@ -1,4 +1,4 @@
-// HeroSection.jsx
+// ========================= src/components/Hero/HeroSection.jsx =========================
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import card1 from "../../assets/قسم مستلزمات� الأطفال.png";
@@ -8,21 +8,22 @@ import log from "../../assets/logo.png"; // شعار الأنثور
 const cards = [
   { id: 1, image: card1, trend: '  ', title: 'مستلزمات المواليد' },
   { id: 2, image: card2, trend: ' ',  title: 'الألعاب' },
-
 ];
 
-// خريطة ربط عناوين الكروت مع فلاتر المتجر الموجودة
-const categoryMap = {
-    'مستلزمات المواليد': 'مستلزمات المواليد',
-    'الألعاب': 'الألعاب',
+// ربط العنوان بـ mainCategory (فقط)
+// لا نريد إظهاره كفلتر لاحقًا
+const mainCategoryMap = {
+  'مستلزمات المواليد': 'مستلزمات المواليد',
+  'الألعاب': 'الألعاب',
 };
 
 const HeroSection = () => {
   const navigate = useNavigate();
 
   const handleClick = (title) => {
-    const category = categoryMap[title] || title;
-    navigate(`/shop?category=${encodeURIComponent(category)}`);
+    const mainCategory = mainCategoryMap[title] || title;
+    // نرسل mainCategory فقط (بدون category)
+    navigate(`/shop?mainCategory=${encodeURIComponent(mainCategory)}`);
   };
 
   return (

@@ -10,6 +10,7 @@ const ShopPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [filtersState, setFiltersState] = useState({
+    mainCategory: '', // ✅ فئة أساسية (غير مرئية للمستخدم)
     category: '',
     availability: '',  // '', 'in', 'out'
     minPrice: '',
@@ -19,18 +20,20 @@ const ShopPage = () => {
 
   // قراءة الفلاتر من URL أول مرة
   useEffect(() => {
+    const mainCategory = searchParams.get('mainCategory') || '';
     const category     = searchParams.get('category') || '';
     const availability = searchParams.get('availability') || '';
     const minPrice     = searchParams.get('minPrice') || '';
     const maxPrice     = searchParams.get('maxPrice') || '';
     const sort         = searchParams.get('sort') || 'createdAt:desc';
-    setFiltersState({ category, availability, minPrice, maxPrice, sort });
+    setFiltersState({ mainCategory, category, availability, minPrice, maxPrice, sort });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // مزامنة الفلاتر مع URL
+  // مزامنة الفلاتر مع URL (مع الحفاظ على mainCategory دائمًا إن وُجد)
   useEffect(() => {
     const params = {};
+    if (filtersState.mainCategory) params.mainCategory = filtersState.mainCategory; // ✅ ثابت
     if (filtersState.category)     params.category     = filtersState.category;
     if (filtersState.availability) params.availability = filtersState.availability;
     if (filtersState.minPrice)     params.minPrice     = filtersState.minPrice;
@@ -47,6 +50,7 @@ const ShopPage = () => {
     error,
     isLoading
   } = useFetchAllProductsQuery({
+    mainCategory: filtersState.mainCategory, // ✅ تمرير الفئة الأساسية للـ API
     category: filtersState.category,
     availability: filtersState.availability,
     minPrice: filtersState.minPrice,
@@ -60,6 +64,7 @@ const ShopPage = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [
+    filtersState.mainCategory, // ✅ لو تغيّرت (نادراً)، نرجع للصفحة 1
     filtersState.category,
     filtersState.availability,
     filtersState.minPrice,
@@ -68,13 +73,15 @@ const ShopPage = () => {
   ]);
 
   const clearFilters = () => {
-    setFiltersState({
+    // ✅ مسح كل الفلاتر مع الحفاظ على mainCategory كما هي
+    setFiltersState(prev => ({
+      mainCategory: prev.mainCategory,
       category: '',
       availability: '',
       minPrice: '',
       maxPrice: '',
       sort: 'createdAt:desc',
-    });
+    }));
     setCurrentPage(1);
   };
 
@@ -93,7 +100,7 @@ const ShopPage = () => {
         <div className="absolute inset-0 bg-black/20 flex items-center justify-center" />
       </section>
 
-      {/* شريط فلاتر */}
+      {/* شريط فلاتر (لا يحتوي على mainCategory) */}
       <div className=" pt-6">
         <ShopFiltering
           filtersState={filtersState}
@@ -102,13 +109,6 @@ const ShopPage = () => {
           highestPrice={highestPrice}
         />
       </div>
-
-      {/* عدد النتائج */}
-      {/* <div className="section__container py-3">
-        <p className="text-xs text-gray-600" dir="rtl">
-          النتائج: <span className="font-semibold">{totalProducts}</span>
-        </p>
-      </div> */}
 
       {/* قائمة المنتجات + صفحات */}
       <section className='section__container'>
