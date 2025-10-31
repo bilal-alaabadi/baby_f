@@ -112,7 +112,6 @@ const UpdateProduct = () => {
     } else {
       setColorsEnabled(false);
       setColorRows([{ color: '', stock: '' }]);
-      // حافظ على الألوان النصية إن وجدت
       const initialColors = Array.isArray(p?.colors) ? p.colors : [];
       setColorsSimple(initialColors);
     }
@@ -226,14 +225,14 @@ const UpdateProduct = () => {
         ? Number(minOptionPrice ?? 0)
         : Number(product.price);
 
-      // countPrices
+      // countPrices — مهم: أرسل undefined إذا القسم غير مفعّل حتى لا يُحسب 0 بالخلفية
       const countPrices = optionsEnabled
         ? options.map(o => ({
             count: String(o.name).trim(),
             price: Number(o.price),
             stock: Math.max(0, Math.floor(Number(o.stock))),
           }))
-        : [];
+        : undefined;
 
       // colorsStock
       const colorsStockPayload = colorsEnabled
@@ -241,14 +240,14 @@ const UpdateProduct = () => {
             color: String(r.color).trim(),
             stock: Math.max(0, Math.floor(Number(r.stock))),
           }))
-        : [];
+        : undefined;
 
       // colors (أسماء فقط للتوافق والبحث)
       const colorsNames = colorsEnabled
         ? colorsStockPayload.map(x => x.color)
         : colorsSimple;
 
-      // حساب المخزون النهائي
+      // حساب المخزون النهائي في الواجهة (للعرض/الاتساق فقط)
       const totalCountStock = optionsEnabled
         ? countPrices.reduce((s, o) => s + (o.stock || 0), 0)
         : null;
@@ -272,7 +271,6 @@ const UpdateProduct = () => {
       await updateProduct({
         id,
         body: {
-          // أساسية
           name: product.name,
           mainCategory: product.mainCategory,
           category: product.category,
@@ -282,17 +280,14 @@ const UpdateProduct = () => {
           image,
           author: user?._id,
 
-          // المخزون الإجمالي النهائي
           stock: finalStock,
 
-          // خصائص إضافية
           size: String(product.size ?? ''),
           count: String(product.count ?? ''),
 
-          // للهياكل المرنة:
-          colors: colorsNames,                    // أسماء الألوان فقط
-          colorsStock: colorsEnabled ? colorsStockPayload : undefined, // لعرض مخزون كل لون
-          countPrices,                            // عدد القطع مع السعر والمخزون
+          colors: colorsNames,
+          colorsStock: colorsStockPayload,       // undefined إذا غير مفعّل
+          countPrices,                           // undefined إذا غير مفعّل (هذا هو التعديل المهم)
         }
       }).unwrap();
 
@@ -449,34 +444,6 @@ const UpdateProduct = () => {
             ))}
           </div>
         )}
-
-        {/* ألوان بسيطة (إن لم تُفعّل الألوان) */}
-        {/* {!colorsEnabled && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">الألوان المتوفرة (اختياري)</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                className="add-product-InputCSS flex-1"
-                placeholder="اكتب اسم اللون ثم اضغط إضافة"
-                value={colorInput}
-                onChange={(e) => setColorInput(e.target.value)}
-                onKeyDown={handleKeyDownOnColor}
-              />
-              <button type="button" onClick={addColorSimple} className="px-4 py-2 rounded-md bg-gray-800 text-white hover:bg-black">إضافة لون</button>
-            </div>
-            {colorsSimple.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {colorsSimple.map((c, i) => (
-                  <span key={`${c}-${i}`} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border bg-gray-50 text-sm">
-                    {c}
-                    <button type="button" onClick={() => removeColorSimple(i)} className="text-red-600 hover:text-red-700" aria-label={`حذف اللون ${c}`} title="حذف">×</button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )} */}
 
         <UploadImage name="image" id="image" uploaded={image} setImage={setImage} />
 
