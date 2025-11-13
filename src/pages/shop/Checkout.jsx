@@ -10,7 +10,7 @@ const Checkout = () => {
   const [error, setError] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [email, setEmail] = useState('');
+  // const [email, setEmail] = useState('');
   const [wilayat, setWilayat] = useState('');
   const [description, setDescription] = useState('');
 
@@ -40,7 +40,7 @@ const Checkout = () => {
       return;
     }
 
-    if (!customerName || !customerPhone || !country || !wilayat || !email) {
+    if (!customerName || !customerPhone || !country || !wilayat ) {
       setError("الرجاء إدخال جميع المعلومات المطلوبة (الاسم، رقم الهاتف، الإيميل، البلد، العنوان)");
       return;
     }
@@ -64,7 +64,7 @@ const Checkout = () => {
       country,
       wilayat,
       description,
-      email
+      // email
     };
 
     try {
@@ -123,7 +123,7 @@ const Checkout = () => {
               />
             </div>
 
-            <div>
+            {/* <div>
               <label className="block text-gray-700 mb-2">البريد الإلكتروني</label>
               <input
                 type="email"
@@ -133,7 +133,7 @@ const Checkout = () => {
                 required
                 placeholder="example@email.com"
               />
-            </div>
+            </div> */}
 
             <div>
               <label className="block text-gray-700 mb-2">البلد</label>

@@ -1,7 +1,6 @@
 // components/PaymentSuccess.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { getBaseUrl } from '../utils/baseURL';
-import TimelineStep from './Timeline';
 
 // ✅ استيراد التفريغ من السلة
 import { useDispatch } from 'react-redux';
@@ -16,6 +15,9 @@ const PaymentSuccess = () => {
 
   // ✅ لضمان عدم تكرار تفريغ السلة (React StrictMode وغيره)
   const clearedRef = useRef(false);
+
+  // ✅ لضمان عدم تكرار إرسال الإيميل في نفس الـ mount
+  const emailSentRef = useRef(false);
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -77,12 +79,60 @@ const PaymentSuccess = () => {
     }
   }, []);
 
-  // ✅ عند نجاح الدفع: تفريغ السلة مرة واحدة فقط
+  // ✅ عند نجاح الدفع: تفريغ السلة + إرسال إيميل لمالك المتجر مرة واحدة فقط
   useEffect(() => {
-    if (order?.status === 'completed' && !clearedRef.current) {
-      dispatch(clearCart());              // يحدّث الحالة ويحفظها في localStorage عبر reducer
-      clearedRef.current = true;          // منع التكرار
-      // لا حاجة لمسح localStorage يدويًا لأن clearCart يستدعي saveState داخل الـ slice
+    if (order?.status === 'completed') {
+      // تفريغ السلة مرة واحدة فقط
+      if (!clearedRef.current) {
+        dispatch(clearCart());              // يحدّث الحالة ويحفظها في localStorage عبر reducer
+        clearedRef.current = true;          // منع التكرار
+      }
+
+      // مفتاح التخزين حسب رقم الطلب (حتى لا يُرسل الإيميل مرة ثانية بعد الـ Refresh)
+      const notifKey = order?._id ? `adminMail_${order._id}` : null;
+
+      // إرسال الإيميل لصاحب المتجر مرة واحدة فقط (مع الحماية من الـ refresh)
+      if (
+        notifKey &&                         // نتأكد أن للطلب ID
+        !emailSentRef.current &&            // لم يُرسل في هذا الـ mount
+        !localStorage.getItem(notifKey)     // ولم يُسجّل مسبقًا في المتصفح
+      ) {
+        emailSentRef.current = true;
+        localStorage.setItem(notifKey, 'sent');
+
+        fetch(`${getBaseUrl()}/api/orders/notify-admin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: 'baby7aven.om@gmail.com',      // الإيميل الذي طلبته
+            orderId: order._id,
+            status: order.status,
+            amount: order.amount,
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            country: order.country,
+            wilayat: order.wilayat,
+            products: order.products || [],
+          }),
+        })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error(`Failed to send email, status: ${res.status}`);
+            }
+            return res.json().catch(() => ({}));
+          })
+          .then(() => {
+            console.log('Admin email sent to baby7aven.om@gmail.com');
+          })
+          .catch((err) => {
+            console.error('Error sending admin email:', err);
+            // في حال الفشل نزيل العلامة لنسمح بالمحاولة لاحقًا
+            if (notifKey) {
+              localStorage.removeItem(notifKey);
+            }
+            emailSentRef.current = false;
+          });
+      }
     }
   }, [order, dispatch]);
 
@@ -184,11 +234,10 @@ const PaymentSuccess = () => {
             </span>
           </div>
 
-          {/* ✅ إظهار البريد الإلكتروني */}
-          <div className="flex justify-between py-2 border-t pt-3">
+          {/* <div className="flex justify-between py-2 border-t pt-3">
             <span>البريد الإلكتروني:</span>
             <span className="font-semibold break-all">{order.email || 'غير متوفر'}</span>
-          </div>
+          </div> */}
           
           <div className="flex justify-between py-2">
             <span>حالة الطلب:</span>
