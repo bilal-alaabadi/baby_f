@@ -104,7 +104,7 @@ const PaymentSuccess = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to: 'baby7aven.om@gmail.com',      // الإيميل الذي طلبته
+            to: 'mdbilalnizwa@gmail.com',      // الإيميل الذي طلبته
             orderId: order._id,
             status: order.status,
             amount: order.amount,
